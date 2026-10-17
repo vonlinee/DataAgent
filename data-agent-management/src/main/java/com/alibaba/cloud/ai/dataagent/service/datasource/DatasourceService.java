@@ -18,6 +18,7 @@ package com.alibaba.cloud.ai.dataagent.service.datasource;
 import com.alibaba.cloud.ai.dataagent.bo.DbConfigBO;
 import com.alibaba.cloud.ai.dataagent.entity.Datasource;
 import com.alibaba.cloud.ai.dataagent.entity.LogicalRelation;
+import com.alibaba.cloud.ai.dataagent.vo.DatasourceConnectionTestResult;
 import java.util.List;
 
 public interface DatasourceService {
@@ -66,6 +67,11 @@ public interface DatasourceService {
 	 * Test data source connection
 	 */
 	boolean testConnection(Integer id);
+
+	/**
+	 * Test the supplied datasource configuration and return server metadata.
+	 */
+	DatasourceConnectionTestResult testConnection(Datasource datasource);
 
 	List<String> getDatasourceTables(Integer datasourceId) throws Exception;
 

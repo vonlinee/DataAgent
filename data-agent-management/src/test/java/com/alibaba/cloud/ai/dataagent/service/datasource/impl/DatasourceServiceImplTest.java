@@ -26,6 +26,8 @@ import com.alibaba.cloud.ai.dataagent.mapper.DatasourceMapper;
 import com.alibaba.cloud.ai.dataagent.mapper.LogicalRelationMapper;
 import com.alibaba.cloud.ai.dataagent.service.datasource.handler.DatasourceTypeHandler;
 import com.alibaba.cloud.ai.dataagent.service.datasource.handler.registry.DatasourceTypeHandlerRegistry;
+import com.alibaba.cloud.ai.dataagent.bo.DbConfigBO;
+import com.alibaba.cloud.ai.dataagent.vo.DatasourceConnectionTestResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,6 +36,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Collections;
 import java.util.List;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -67,6 +71,12 @@ class DatasourceServiceImplTest {
 
 	@Mock
 	private DBConnectionPool dbConnectionPool;
+
+	@Mock
+	private Connection connection;
+
+	@Mock
+	private DatabaseMetaData databaseMetaData;
 
 	@BeforeEach
 	void setUp() {
@@ -439,6 +449,41 @@ class DatasourceServiceImplTest {
 
 		assertFalse(datasourceService.testConnection(1));
 		verify(datasourceMapper).updateTestStatusById(1, "failed");
+	}
+
+	@Test
+	void testConnection_details_returnsServerMetadata() throws Exception {
+		Datasource ds = Datasource.builder()
+			.type("mysql")
+			.host("localhost")
+			.port(3306)
+			.databaseName("sakila")
+			.username("root")
+			.password("secret")
+			.build();
+		DbConfigBO config = DbConfigBO.builder().url("jdbc:mysql://localhost:3306/sakila").build();
+		when(handlerRegistry.getRequired("mysql")).thenReturn(typeHandler);
+		when(typeHandler.toDbConfig(ds)).thenReturn(config);
+		when(poolFactory.getPoolByDbType("mysql")).thenReturn(dbConnectionPool);
+		when(dbConnectionPool.getConnection(config)).thenReturn(connection);
+		when(connection.getMetaData()).thenReturn(databaseMetaData);
+		when(databaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+		when(databaseMetaData.getDatabaseProductVersion()).thenReturn("8.0.35");
+		when(databaseMetaData.getDriverName()).thenReturn("MySQL Connector/J");
+		when(databaseMetaData.getDriverVersion()).thenReturn("8.4.0");
+		when(databaseMetaData.getJDBCMajorVersion()).thenReturn(4);
+		when(databaseMetaData.getJDBCMinorVersion()).thenReturn(2);
+		when(databaseMetaData.getURL()).thenReturn("jdbc:mysql://localhost:3306/sakila?useSSL=false");
+		when(connection.getCatalog()).thenReturn("sakila");
+		when(connection.getSchema()).thenReturn(null);
+
+		DatasourceConnectionTestResult result = datasourceService.testConnection(ds);
+
+		assertEquals("MySQL", result.getDatabaseProductName());
+		assertEquals("8.0.35", result.getDatabaseProductVersion());
+		assertEquals("4.2", result.getJdbcVersion());
+		assertFalse(result.getSslEnabled());
+		assertEquals("sakila", result.getCatalog());
 	}
 
 }

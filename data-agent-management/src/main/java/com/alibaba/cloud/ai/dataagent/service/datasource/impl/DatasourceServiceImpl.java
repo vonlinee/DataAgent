@@ -32,6 +32,10 @@ import com.alibaba.cloud.ai.dataagent.mapper.LogicalRelationMapper;
 import com.alibaba.cloud.ai.dataagent.service.datasource.DatasourceService;
 import com.alibaba.cloud.ai.dataagent.service.datasource.handler.DatasourceTypeHandler;
 import com.alibaba.cloud.ai.dataagent.service.datasource.handler.registry.DatasourceTypeHandlerRegistry;
+import com.alibaba.cloud.ai.dataagent.vo.DatasourceConnectionTestResult;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -177,6 +181,107 @@ public class DatasourceServiceImpl implements DatasourceService {
 			log.error("Error testing connection for datasource ID " + id + ": " + e.getMessage(), e);
 			return false;
 		}
+	}
+
+	@Override
+	public DatasourceConnectionTestResult testConnection(Datasource datasource) {
+		if (datasource == null) {
+			throw new IllegalArgumentException("数据源配置不能为空");
+		}
+
+		Datasource target = datasource;
+		// Passwords are write-only in the API response. Reuse the stored password when
+		// editing an existing datasource and the user leaves the password unchanged.
+		if (StringUtils.isBlank(target.getPassword()) && target.getId() != null) {
+			Datasource existing = getDatasourceById(target.getId());
+			if (existing != null && StringUtils.isNotBlank(existing.getPassword())) {
+				target = Datasource.builder()
+					.id(target.getId())
+					.name(target.getName())
+					.type(target.getType())
+					.host(target.getHost())
+					.port(target.getPort())
+					.databaseName(target.getDatabaseName())
+					.username(target.getUsername())
+					.password(existing.getPassword())
+					.connectionUrl(target.getConnectionUrl())
+					.description(target.getDescription())
+					.build();
+			}
+		}
+
+		DbConfigBO config = getDbConfig(target);
+		DBConnectionPool pool = poolFactory.getPoolByDbType(target.getType());
+		long startedAt = System.nanoTime();
+		try (Connection connection = pool.getConnection(config)) {
+			DatabaseMetaData metadata = connection.getMetaData();
+			long latencyMs = Math.max(0L, (System.nanoTime() - startedAt) / 1_000_000L);
+			return DatasourceConnectionTestResult.builder()
+				.databaseProductName(metadata.getDatabaseProductName())
+				.databaseProductVersion(metadata.getDatabaseProductVersion())
+				.driverName(metadata.getDriverName())
+				.driverVersion(metadata.getDriverVersion())
+				.jdbcVersion(metadata.getJDBCMajorVersion() + "." + metadata.getJDBCMinorVersion())
+				.caseSensitivity(caseSensitivity(metadata))
+				.latencyMs(latencyMs)
+				.sslEnabled(detectSsl(metadata))
+				.catalog(readCatalog(connection))
+				.schema(readSchema(connection))
+				.build();
+		}
+		catch (SQLException e) {
+			throw new IllegalStateException("连接数据库失败：" + e.getMessage(), e);
+		}
+	}
+
+	private String readCatalog(Connection connection) {
+		try {
+			return connection.getCatalog();
+		}
+		catch (SQLException e) {
+			return null;
+		}
+	}
+
+	private String readSchema(Connection connection) {
+		try {
+			return connection.getSchema();
+		}
+		catch (SQLException e) {
+			return null;
+		}
+	}
+
+	private Boolean detectSsl(DatabaseMetaData metadata) {
+		try {
+			String url = metadata.getURL();
+			if (StringUtils.isBlank(url)) {
+				return null;
+			}
+			String normalized = url.toLowerCase(java.util.Locale.ROOT);
+			if (normalized.contains("usessl=true") || normalized.contains("ssl=true")
+					|| normalized.contains("sslmode=require") || normalized.contains("sslmode=verify")) {
+				return true;
+			}
+			if (normalized.contains("usessl=false") || normalized.contains("ssl=false")
+					|| normalized.contains("sslmode=disable")) {
+				return false;
+			}
+		}
+		catch (SQLException ignored) {
+			// Some drivers do not expose the original JDBC URL.
+		}
+		return null;
+	}
+
+	private String caseSensitivity(DatabaseMetaData metadata) throws SQLException {
+		String plain = metadata.storesLowerCaseIdentifiers() ? "plain-lower"
+				: metadata.storesUpperCaseIdentifiers() ? "plain-upper"
+						: metadata.storesMixedCaseIdentifiers() ? "plain-mixed" : "plain-unknown";
+		String delimited = metadata.storesLowerCaseQuotedIdentifiers() ? "delimited-lower"
+				: metadata.storesUpperCaseQuotedIdentifiers() ? "delimited-upper"
+						: metadata.storesMixedCaseQuotedIdentifiers() ? "delimited-mixed" : "delimited-unknown";
+		return plain + ", " + delimited;
 	}
 
 	/**

@@ -24,6 +24,7 @@ import com.alibaba.cloud.ai.dataagent.exception.InternalServerException;
 import com.alibaba.cloud.ai.dataagent.exception.InvalidInputException;
 import com.alibaba.cloud.ai.dataagent.service.datasource.DatasourceService;
 import com.alibaba.cloud.ai.dataagent.vo.ApiResponse;
+import com.alibaba.cloud.ai.dataagent.vo.DatasourceConnectionTestResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -101,6 +102,33 @@ class DatasourceControllerTest {
 		when(datasourceService.testConnection(1)).thenThrow(new RuntimeException("conn error"));
 
 		assertThrows(InternalServerException.class, () -> datasourceController.testConnection(1));
+	}
+
+	@Test
+	void testConnection_details_returnsMetadata() {
+		Datasource input = Datasource.builder().type("mysql").host("localhost").port(3306).build();
+		DatasourceConnectionTestResult details = DatasourceConnectionTestResult.builder()
+			.databaseProductName("MySQL")
+			.databaseProductVersion("8.0.35")
+			.latencyMs(12L)
+			.build();
+		when(datasourceService.testConnection(input)).thenReturn(details);
+
+		ApiResponse<DatasourceConnectionTestResult> result = datasourceController.testConnection(input);
+
+		assertTrue(result.isSuccess());
+		assertEquals("MySQL", result.getData().getDatabaseProductName());
+	}
+
+	@Test
+	void testConnection_details_returnsErrorWhenConnectionFails() {
+		Datasource input = Datasource.builder().type("mysql").build();
+		when(datasourceService.testConnection(input)).thenThrow(new RuntimeException("access denied"));
+
+		ApiResponse<DatasourceConnectionTestResult> result = datasourceController.testConnection(input);
+
+		assertFalse(result.isSuccess());
+		assertTrue(result.getMessage().contains("access denied"));
 	}
 
 	@Test

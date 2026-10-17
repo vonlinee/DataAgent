@@ -70,6 +70,20 @@ export interface Datasource {
   updateTime?: string;
 }
 
+/** Connection metadata returned after testing a datasource configuration. */
+export interface DatasourceConnectionTestResult {
+  databaseProductName?: string;
+  databaseProductVersion?: string;
+  driverName?: string;
+  driverVersion?: string;
+  jdbcVersion?: string;
+  caseSensitivity?: string;
+  latencyMs?: number;
+  sslEnabled?: boolean;
+  catalog?: string;
+  schema?: string;
+}
+
 /**
  * @description 逻辑外键关系实体接口
  */
@@ -220,6 +234,17 @@ class DatasourceService {
    */
   async testConnection(id: number): Promise<ApiResponse<boolean>> {
     const response = await axios.post<ApiResponse<boolean>>(`${API_BASE_URL}/${id}/test`);
+    return response.data;
+  }
+
+  /** Test the current form values without saving the datasource first. */
+  async testConnectionDetails(
+    datasource: Datasource,
+  ): Promise<ApiResponse<DatasourceConnectionTestResult>> {
+    const response = await axios.post<ApiResponse<DatasourceConnectionTestResult>>(
+      `${API_BASE_URL}/test`,
+      datasource,
+    );
     return response.data;
   }
 

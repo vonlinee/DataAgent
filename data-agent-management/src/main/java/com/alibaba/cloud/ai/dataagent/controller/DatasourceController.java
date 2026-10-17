@@ -25,6 +25,7 @@ import com.alibaba.cloud.ai.dataagent.exception.InternalServerException;
 import com.alibaba.cloud.ai.dataagent.exception.InvalidInputException;
 import com.alibaba.cloud.ai.dataagent.service.datasource.DatasourceService;
 import com.alibaba.cloud.ai.dataagent.vo.ApiResponse;
+import com.alibaba.cloud.ai.dataagent.vo.DatasourceConnectionTestResult;
 import jakarta.validation.Valid;
 import java.util.Arrays;
 import java.util.List;
@@ -175,6 +176,21 @@ public class DatasourceController {
 		}
 		catch (Exception e) {
 			throw new InternalServerException("测试失败：" + e.getMessage());
+		}
+	}
+
+	/**
+	 * Test an unsaved or edited datasource configuration and return server metadata.
+	 */
+	@PostMapping("/test")
+	public ApiResponse<DatasourceConnectionTestResult> testConnection(@RequestBody Datasource datasource) {
+		try {
+			DatasourceConnectionTestResult result = datasourceService.testConnection(datasource);
+			return ApiResponse.success("连接测试成功", result);
+		}
+		catch (Exception e) {
+			log.warn("Datasource connection test failed: {}", e.getMessage());
+			return ApiResponse.error("连接测试失败：" + e.getMessage());
 		}
 	}
 
