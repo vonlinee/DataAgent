@@ -16,6 +16,7 @@
 package com.alibaba.cloud.ai.dataagent.controller;
 
 import com.alibaba.cloud.ai.dataagent.entity.Agent;
+import com.alibaba.cloud.ai.dataagent.enums.AgentStatus;
 import com.alibaba.cloud.ai.dataagent.service.agent.AgentService;
 import com.alibaba.cloud.ai.dataagent.vo.ApiKeyResponse;
 import com.alibaba.cloud.ai.dataagent.vo.ApiResponse;
@@ -98,7 +99,7 @@ public class AgentController {
 	@PostMapping("/{id}/publish")
 	public Agent publish(@PathVariable Long id) {
 		Agent agent = checkAgentExists(id);
-		agent.setStatus("published");
+		agent.setStatus(AgentStatus.PUBLISHED.getStatus());
 		return agentService.save(agent);
 	}
 

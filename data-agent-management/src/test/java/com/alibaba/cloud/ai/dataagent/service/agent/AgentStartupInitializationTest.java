@@ -18,6 +18,7 @@ package com.alibaba.cloud.ai.dataagent.service.agent;
 import com.alibaba.cloud.ai.dataagent.dto.ModelConfigDTO;
 import com.alibaba.cloud.ai.dataagent.entity.Agent;
 import com.alibaba.cloud.ai.dataagent.entity.AgentDatasource;
+import com.alibaba.cloud.ai.dataagent.enums.AgentStatus;
 import com.alibaba.cloud.ai.dataagent.enums.ModelType;
 import com.alibaba.cloud.ai.dataagent.mapper.AgentKnowledgeMapper;
 import com.alibaba.cloud.ai.dataagent.mapper.BusinessKnowledgeMapper;
@@ -82,7 +83,7 @@ class AgentStartupInitializationTest {
 			invocation.<Runnable>getArgument(0).run();
 			return null;
 		}).when(executorService).execute(any(Runnable.class));
-		when(agentService.findByStatus("published")).thenReturn(List.of());
+		when(agentService.findByStatus(AgentStatus.PUBLISHED.getStatus())).thenReturn(List.of());
 		initialization = new AgentStartupInitialization(agentService, agentVectorStoreService, agentDatasourceService,
 				businessKnowledgeService, agentKnowledgeService, businessKnowledgeMapper, agentKnowledgeMapper,
 				modelConfigDataService, executorService);
@@ -112,11 +113,11 @@ class AgentStartupInitializationTest {
 
 	@Test
 	void run_schemaExistsForActiveDatasource_skipsDuplicateInitialization() {
-		Agent agent = Agent.builder().id(1L).name("published").status("published").build();
+		Agent agent = Agent.builder().id(1L).name(AgentStatus.PUBLISHED.getStatus()).status(AgentStatus.PUBLISHED.getStatus()).build();
 		AgentDatasource datasource = new AgentDatasource();
 		datasource.setDatasourceId(3);
 		datasource.setSelectTables(List.of("orders"));
-		when(agentService.findByStatus("published")).thenReturn(List.of(agent));
+		when(agentService.findByStatus(AgentStatus.PUBLISHED.getStatus())).thenReturn(List.of(agent));
 		when(agentDatasourceService.getCurrentAgentDatasource(1L)).thenReturn(datasource);
 		when(agentVectorStoreService.hasTableDocuments(3, List.of("orders"))).thenReturn(true);
 		when(modelConfigDataService.getActiveConfigByType(ModelType.EMBEDDING)).thenReturn(null);
@@ -128,11 +129,11 @@ class AgentStartupInitializationTest {
 
 	@Test
 	void run_onlyBusinessDocumentsExist_initializesMissingSchemaForActiveDatasource() {
-		Agent agent = Agent.builder().id(1L).name("published").status("published").build();
+		Agent agent = Agent.builder().id(1L).name(AgentStatus.PUBLISHED.getStatus()).status(AgentStatus.PUBLISHED.getStatus()).build();
 		AgentDatasource datasource = new AgentDatasource();
 		datasource.setDatasourceId(3);
 		datasource.setSelectTables(List.of("orders"));
-		when(agentService.findByStatus("published")).thenReturn(List.of(agent));
+		when(agentService.findByStatus(AgentStatus.PUBLISHED.getStatus())).thenReturn(List.of(agent));
 		when(agentDatasourceService.getCurrentAgentDatasource(1L)).thenReturn(datasource);
 		when(agentVectorStoreService.hasTableDocuments(3, List.of("orders"))).thenReturn(false);
 		when(agentDatasourceService.initializeSchemaForAgentWithDatasource(1L, 3, List.of("orders"))).thenReturn(true);

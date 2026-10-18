@@ -17,6 +17,7 @@ package com.alibaba.cloud.ai.dataagent.service.agent;
 
 import com.alibaba.cloud.ai.dataagent.entity.Agent;
 import com.alibaba.cloud.ai.dataagent.entity.AgentKnowledge;
+import com.alibaba.cloud.ai.dataagent.enums.AgentStatus;
 import com.alibaba.cloud.ai.dataagent.mapper.AgentKnowledgeMapper;
 import com.alibaba.cloud.ai.dataagent.mapper.AgentMapper;
 import com.alibaba.cloud.ai.dataagent.security.ApiKeyCredentialService;
@@ -76,12 +77,12 @@ class AgentServiceImplTest {
 		Agent agent = Agent.builder().id(1L).name("agent").build();
 		when(agentMapper.findAll()).thenReturn(List.of(agent));
 		when(agentMapper.findById(1L)).thenReturn(agent);
-		when(agentMapper.findByStatus("published")).thenReturn(List.of(agent));
+		when(agentMapper.findByStatus(AgentStatus.PUBLISHED.getStatus())).thenReturn(List.of(agent));
 		when(agentMapper.searchByKeyword("agent")).thenReturn(List.of(agent));
 
 		assertEquals(1, agentService.findAll().size());
 		assertEquals(agent, agentService.findById(1L));
-		assertEquals(1, agentService.findByStatus("published").size());
+		assertEquals(1, agentService.findByStatus(AgentStatus.PUBLISHED.getStatus()).size());
 		assertEquals(1, agentService.search("agent").size());
 	}
 

@@ -16,6 +16,7 @@
 package com.alibaba.cloud.ai.dataagent.controller;
 
 import com.alibaba.cloud.ai.dataagent.entity.Agent;
+import com.alibaba.cloud.ai.dataagent.enums.AgentStatus;
 import com.alibaba.cloud.ai.dataagent.service.agent.AgentService;
 import com.alibaba.cloud.ai.dataagent.vo.ApiKeyResponse;
 import com.alibaba.cloud.ai.dataagent.vo.ApiResponse;
@@ -96,7 +97,7 @@ class AgentControllerTest {
 
 		Agent result = agentController.publish(1L);
 
-		assertEquals("published", result.getStatus());
+		assertEquals(AgentStatus.PUBLISHED.getStatus(), result.getStatus());
 		verify(agentService).save(any(Agent.class));
 	}
 

@@ -17,6 +17,7 @@ package com.alibaba.cloud.ai.dataagent.service.agent;
 
 import com.alibaba.cloud.ai.dataagent.entity.Agent;
 import com.alibaba.cloud.ai.dataagent.entity.AgentDatasource;
+import com.alibaba.cloud.ai.dataagent.enums.AgentStatus;
 import com.alibaba.cloud.ai.dataagent.enums.EmbeddingStatus;
 import com.alibaba.cloud.ai.dataagent.enums.ModelType;
 import com.alibaba.cloud.ai.dataagent.mapper.AgentKnowledgeMapper;
@@ -116,7 +117,7 @@ public class AgentStartupInitialization implements ApplicationRunner, Disposable
 	/** Initialize all published agents */
 	private void initializePublishedAgents() {
 		try {
-			List<Agent> publishedAgents = agentService.findByStatus("published");
+			List<Agent> publishedAgents = agentService.findByStatus(AgentStatus.PUBLISHED.getStatus());
 
 			if (publishedAgents.isEmpty()) {
 				log.info("No published agents found, skipping initialization");
