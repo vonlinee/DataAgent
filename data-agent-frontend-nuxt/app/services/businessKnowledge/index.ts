@@ -213,6 +213,16 @@ class BusinessKnowledgeService {
     );
     return response.data.success;
   }
+
+  /** Trigger embedding for recalled knowledge that is still pending. */
+  async syncPendingKnowledge(agentId: number): Promise<boolean> {
+    const response = await axios.post<ApiResponse<boolean>>(
+      `${API_BASE_URL}/sync-pending`,
+      null,
+      { params: { agentId } },
+    );
+    return response.data.success;
+  }
 }
 
 export default new BusinessKnowledgeService();

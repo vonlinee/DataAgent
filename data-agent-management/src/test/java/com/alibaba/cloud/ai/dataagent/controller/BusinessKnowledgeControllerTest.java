@@ -183,4 +183,12 @@ class BusinessKnowledgeControllerTest {
 		verify(businessKnowledgeService).retryEmbedding(1L);
 	}
 
+	@Test
+	void syncPendingKnowledge_returnsSuccess() {
+		ApiResponse<Boolean> result = controller.syncPendingKnowledge(1L);
+
+		assertTrue(result.isSuccess());
+		verify(businessKnowledgeService).syncPendingKnowledge(1L);
+	}
+
 }

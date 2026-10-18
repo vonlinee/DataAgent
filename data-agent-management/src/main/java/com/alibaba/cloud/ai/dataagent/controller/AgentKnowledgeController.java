@@ -168,4 +168,10 @@ public class AgentKnowledgeController {
 		return ApiResponse.success("重试向量化操作成功，如果是文件解析需要花费点时间，请耐心等待...");
 	}
 
+	@PostMapping("/sync-pending")
+	public ApiResponse<Boolean> syncPendingKnowledge(@RequestParam(value = "agentId", required = false) Integer agentId) {
+		agentKnowledgeService.syncPendingKnowledge(agentId);
+		return ApiResponse.success("已触发待处理智能体知识同步");
+	}
+
 }

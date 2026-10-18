@@ -165,4 +165,12 @@ class AgentKnowledgeControllerTest {
 		verify(agentKnowledgeService).retryEmbedding(1);
 	}
 
+	@Test
+	void syncPendingKnowledge_returnsSuccess() {
+		ApiResponse<Boolean> result = controller.syncPendingKnowledge(1);
+
+		assertTrue(result.isSuccess());
+		verify(agentKnowledgeService).syncPendingKnowledge(1);
+	}
+
 }

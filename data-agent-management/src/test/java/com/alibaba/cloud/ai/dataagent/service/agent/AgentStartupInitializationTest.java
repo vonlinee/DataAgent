@@ -22,6 +22,7 @@ import com.alibaba.cloud.ai.dataagent.enums.AgentStatus;
 import com.alibaba.cloud.ai.dataagent.enums.ModelType;
 import com.alibaba.cloud.ai.dataagent.mapper.AgentKnowledgeMapper;
 import com.alibaba.cloud.ai.dataagent.mapper.BusinessKnowledgeMapper;
+import com.alibaba.cloud.ai.dataagent.properties.DataAgentProperties;
 import com.alibaba.cloud.ai.dataagent.service.aimodelconfig.ModelConfigDataService;
 import com.alibaba.cloud.ai.dataagent.service.business.BusinessKnowledgeService;
 import com.alibaba.cloud.ai.dataagent.service.datasource.AgentDatasourceService;
@@ -37,7 +38,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.ApplicationArguments;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -75,18 +76,21 @@ class AgentStartupInitializationTest {
 	@Mock
 	private ApplicationArguments applicationArguments;
 
+	private DataAgentProperties properties;
+
 	private AgentStartupInitialization initialization;
 
 	@BeforeEach
 	void setUp() {
-		doAnswer(invocation -> {
+		lenient().doAnswer(invocation -> {
 			invocation.<Runnable>getArgument(0).run();
 			return null;
 		}).when(executorService).execute(any(Runnable.class));
-		when(agentService.findByStatus(AgentStatus.PUBLISHED.getStatus())).thenReturn(List.of());
+		lenient().when(agentService.findByStatus(AgentStatus.PUBLISHED.getStatus())).thenReturn(List.of());
+		properties = new DataAgentProperties();
 		initialization = new AgentStartupInitialization(agentService, agentVectorStoreService, agentDatasourceService,
 				businessKnowledgeService, agentKnowledgeService, businessKnowledgeMapper, agentKnowledgeMapper,
-				modelConfigDataService, executorService);
+				modelConfigDataService, executorService, properties);
 	}
 
 	@Test
@@ -95,20 +99,29 @@ class AgentStartupInitializationTest {
 
 		initialization.run(applicationArguments);
 
-		verify(businessKnowledgeMapper, never()).selectAll();
+		verify(businessKnowledgeService, never()).syncPendingKnowledge();
 		verify(agentKnowledgeMapper, never()).selectPendingAndRecalled();
 	}
 
 	@Test
 	void run_withActiveEmbeddingModel_checksBothPendingKnowledgeSources() {
 		when(modelConfigDataService.getActiveConfigByType(ModelType.EMBEDDING)).thenReturn(ModelConfigDTO.builder().build());
-		when(businessKnowledgeMapper.selectAll()).thenReturn(List.of());
-		when(agentKnowledgeMapper.selectPendingAndRecalled()).thenReturn(List.of());
+		initialization.run(applicationArguments);
+
+		verify(businessKnowledgeService).syncPendingKnowledge();
+		verify(agentKnowledgeService).syncPendingKnowledge();
+	}
+
+	@Test
+	void run_withBusinessStartupSyncDisabled_onlySyncsAgentKnowledge() {
+		properties.getEmbeddingRecovery().getBusinessKnowledge().setStartupSyncEnabled(false);
+		when(modelConfigDataService.getActiveConfigByType(ModelType.EMBEDDING))
+			.thenReturn(ModelConfigDTO.builder().build());
 
 		initialization.run(applicationArguments);
 
-		verify(businessKnowledgeMapper).selectAll();
-		verify(agentKnowledgeMapper).selectPendingAndRecalled();
+		verify(businessKnowledgeService, never()).syncPendingKnowledge();
+		verify(agentKnowledgeService).syncPendingKnowledge();
 	}
 
 	@Test
@@ -142,6 +155,18 @@ class AgentStartupInitializationTest {
 		initialization.run(applicationArguments);
 
 		verify(agentDatasourceService).initializeSchemaForAgentWithDatasource(1L, 3, List.of("orders"));
+	}
+
+	@Test
+	void scheduledSyncDisabled_skipsBothKnowledgeSources() {
+		properties.getEmbeddingRecovery().getBusinessKnowledge().setScheduledSyncEnabled(false);
+		properties.getEmbeddingRecovery().getAgentKnowledge().setScheduledSyncEnabled(false);
+
+		initialization.recoverPendingEmbeddings();
+
+		verify(modelConfigDataService, never()).getActiveConfigByType(ModelType.EMBEDDING);
+		verify(businessKnowledgeService, never()).syncPendingKnowledge();
+		verify(agentKnowledgeService, never()).syncPendingKnowledge();
 	}
 
 }

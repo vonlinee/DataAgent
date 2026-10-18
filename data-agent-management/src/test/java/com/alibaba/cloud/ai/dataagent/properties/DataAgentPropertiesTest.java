@@ -16,6 +16,7 @@
 package com.alibaba.cloud.ai.dataagent.properties;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -26,6 +27,18 @@ class DataAgentPropertiesTest {
 		DataAgentProperties properties = new DataAgentProperties();
 
 		assertEquals(15000L, properties.getEnrichSqlResultTimeout());
+	}
+
+	@Test
+	void embeddingRecoveryDefaultsToStartupAndScheduledSync() {
+		DataAgentProperties properties = new DataAgentProperties();
+
+		assertEquals(300000L, properties.getEmbeddingRecovery().getInitialDelayMs());
+		assertEquals(300000L, properties.getEmbeddingRecovery().getFixedDelayMs());
+		assertTrue(properties.getEmbeddingRecovery().getBusinessKnowledge().isStartupSyncEnabled());
+		assertTrue(properties.getEmbeddingRecovery().getBusinessKnowledge().isScheduledSyncEnabled());
+		assertTrue(properties.getEmbeddingRecovery().getAgentKnowledge().isStartupSyncEnabled());
+		assertTrue(properties.getEmbeddingRecovery().getAgentKnowledge().isScheduledSyncEnabled());
 	}
 
 }

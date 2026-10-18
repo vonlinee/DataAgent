@@ -36,10 +36,20 @@
 					prepend-icon="mdi-sync"
 					class="text-none px-6"
 					elevation="0"
+					:loading="syncPendingLoading"
+					@click="handleSyncPendingKnowledge"
+				>
+					同步待处理
+				</v-btn>
+				<v-btn
+					variant="outlined"
+					color="blue-grey-darken-1"
+					prepend-icon="mdi-database-refresh"
+					class="text-none"
 					:loading="refreshLoading"
 					@click="handleRefreshVectorStore"
 				>
-					同步到向量库
+					重建向量库
 				</v-btn>
 				<v-btn
 					color="blue-darken-3"
@@ -382,6 +392,7 @@ const { showConfirm } = useConfirm();
 
 // ——— 额外状态 ———
 const refreshLoading = ref(false);
+const syncPendingLoading = ref(false);
 const searchKeyword = ref('');
 const currentEditId = ref<number | null>(null);
 const retryLoadingMap = ref<Record<number, boolean>>({});
@@ -574,11 +585,11 @@ async function retryEmbedding(knowledge: BusinessKnowledgeVO) {
 
 function handleRefreshVectorStore() {
 	showConfirm({
-		title: '确认同步',
+		title: '确认重建向量库',
 		message:
-			'如果所有向量状态正常，即无需同步。确定要清除现有数据并开始重新同步吗？',
-		confirmText: '确定同步',
-		icon: 'mdi-sync',
+			'如果所有向量状态正常，即无需重建。确定要清除现有数据并重新同步吗？',
+		confirmText: '确定重建',
+		icon: 'mdi-database-refresh',
 		onConfirm: async () => {
 			refreshLoading.value = true;
 			try {
@@ -586,18 +597,40 @@ function handleRefreshVectorStore() {
 					await businessKnowledgeService.refreshAllKnowledgeToVectorStore(
 						agentId.value.toString(),
 					);
-				if (result) {
-					$tip('同步到向量库成功');
-				} else {
-					$tip('同步到向量库失败', {
-						color: 'error',
-						icon: 'mdi-alert-circle',
-					});
-				}
+				$tip(
+					result ? '向量库重建成功' : '向量库重建失败',
+					result
+						? undefined
+						: { color: 'error', icon: 'mdi-alert-circle' },
+				);
 			} catch {
-				$tip('同步到向量库失败', { color: 'error', icon: 'mdi-alert-circle' });
+				$tip('向量库重建失败', { color: 'error', icon: 'mdi-alert-circle' });
 			} finally {
 				refreshLoading.value = false;
+			}
+		},
+	});
+}
+
+function handleSyncPendingKnowledge() {
+	showConfirm({
+		title: '确认同步待处理知识',
+		message: '仅同步当前智能体中处于等待状态的召回知识，不会重复计算已完成向量。',
+		confirmText: '开始同步',
+		icon: 'mdi-sync',
+		onConfirm: async () => {
+			syncPendingLoading.value = true;
+			try {
+				const result = await businessKnowledgeService.syncPendingKnowledge(agentId.value);
+				$tip(
+					result ? '已触发待处理知识同步' : '同步失败',
+					result ? undefined : { color: 'error', icon: 'mdi-alert-circle' },
+				);
+				if (result) await loadBusinessKnowledge();
+			} catch {
+				$tip('同步失败', { color: 'error', icon: 'mdi-alert-circle' });
+			} finally {
+				syncPendingLoading.value = false;
 			}
 		},
 	});

@@ -172,7 +172,22 @@ public class AgentVectorStoreService {
 | `reserve-percentage` | 预留百分比 (用于缓冲空间) | 0.2 |
 | `max-text-count` | 每批次最大文本数量 (DashScope限制为10) | 10 |
 
-### 3. 向量库配置 (Vector Store)
+### 3. 向量同步恢复配置 (Embedding Recovery)
+
+配置前缀: `spring.ai.alibaba.data-agent.embedding-recovery`
+
+业务知识和智能体知识分别控制启动同步与定时同步。同步只处理已召回且处于 `PENDING` 状态的记录；也可以通过知识页面的“同步待处理”按钮手动触发。
+
+| 配置项 | 说明 | 默认值 |
+|--------|------|--------|
+| `business-knowledge.startup-sync-enabled` | 是否在应用启动后同步业务知识 | true |
+| `business-knowledge.scheduled-sync-enabled` | 是否启用业务知识自动同步 | true |
+| `agent-knowledge.startup-sync-enabled` | 是否在应用启动后同步智能体知识 | true |
+| `agent-knowledge.scheduled-sync-enabled` | 是否启用智能体知识自动同步 | true |
+| `initial-delay-ms` | 定时任务首次执行前的延迟（毫秒） | 300000 |
+| `fixed-delay-ms` | 定时任务两次执行之间的固定延迟（毫秒） | 300000 |
+
+### 4. 向量库配置 (Vector Store)
 
 配置前缀: `spring.ai.alibaba.data-agent.vector-store`
 

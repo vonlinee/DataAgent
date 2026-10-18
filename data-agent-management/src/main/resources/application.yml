@@ -35,6 +35,21 @@ spring:
       type: simple
     alibaba:
       data-agent:
+        embedding-recovery:
+          # 定时同步任务首次执行前的等待时间，单位：毫秒。
+          initial-delay-ms: ${DATA_AGENT_EMBEDDING_RECOVERY_INITIAL_DELAY_MS:300000}
+          # 定时同步任务两次执行之间的固定等待时间，单位：毫秒。
+          fixed-delay-ms: ${DATA_AGENT_EMBEDDING_RECOVERY_FIXED_DELAY_MS:300000}
+          business-knowledge:
+            # 应用启动完成后是否同步待处理的业务知识向量。
+            startup-sync-enabled: ${DATA_AGENT_BUSINESS_EMBEDDING_STARTUP_SYNC_ENABLED:true}
+            # 是否通过定时任务自动同步待处理的业务知识向量。
+            scheduled-sync-enabled: ${DATA_AGENT_BUSINESS_EMBEDDING_SCHEDULED_SYNC_ENABLED:true}
+          agent-knowledge:
+            # 应用启动完成后是否同步待处理的智能体知识向量。
+            startup-sync-enabled: ${DATA_AGENT_AGENT_EMBEDDING_STARTUP_SYNC_ENABLED:true}
+            # 是否通过定时任务自动同步待处理的智能体知识向量。
+            scheduled-sync-enabled: ${DATA_AGENT_AGENT_EMBEDDING_SCHEDULED_SYNC_ENABLED:true}
         vector-store:
           table-topk-limit: 10
           table-similarity-threshold: 0.2

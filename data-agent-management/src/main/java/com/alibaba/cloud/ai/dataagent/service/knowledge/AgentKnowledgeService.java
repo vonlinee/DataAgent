@@ -37,4 +37,9 @@ public interface AgentKnowledgeService {
 
 	void retryEmbedding(Integer id);
 
+	/** Trigger embedding for all recalled agent knowledge still waiting for vectors. */
+	void syncPendingKnowledge();
+
+	void syncPendingKnowledge(Integer agentId);
+
 }

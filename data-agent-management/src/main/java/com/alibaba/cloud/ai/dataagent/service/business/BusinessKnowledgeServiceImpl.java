@@ -273,4 +273,29 @@ public class BusinessKnowledgeServiceImpl implements BusinessKnowledgeService {
 
 	}
 
+	@Override
+	public void syncPendingKnowledge() {
+		syncPendingKnowledge(null);
+	}
+
+	@Override
+	public void syncPendingKnowledge(Long agentId) {
+		List<BusinessKnowledge> pendingKnowledge = businessKnowledgeMapper.selectAll()
+			.stream()
+			.filter(knowledge -> EmbeddingStatus.PENDING.equals(knowledge.getEmbeddingStatus()))
+			.filter(knowledge -> knowledge.getIsRecall() != null && knowledge.getIsRecall() == 1)
+			.filter(knowledge -> agentId == null || agentId.equals(knowledge.getAgentId()))
+			.toList();
+
+		for (BusinessKnowledge knowledge : pendingKnowledge) {
+			try {
+				retryEmbedding(knowledge.getId());
+			}
+			catch (Exception e) {
+				log.error("Failed to auto-embed business knowledge id={}: {}", knowledge.getId(), e.getMessage());
+			}
+		}
+		log.info("Business knowledge pending embedding completed. Total: {}", pendingKnowledge.size());
+	}
+
 }

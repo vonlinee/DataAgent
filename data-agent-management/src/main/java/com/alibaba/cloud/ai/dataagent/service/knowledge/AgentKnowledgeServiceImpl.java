@@ -221,4 +221,25 @@ public class AgentKnowledgeServiceImpl implements AgentKnowledgeService {
 		log.info("Retry embedding for knowledgeId: {}, splitterType: {}", id, knowledge.getSplitterType());
 	}
 
+	@Override
+	public void syncPendingKnowledge() {
+		syncPendingKnowledge(null);
+	}
+
+	@Override
+	public void syncPendingKnowledge(Integer agentId) {
+		List<AgentKnowledge> pendingKnowledge = agentKnowledgeMapper.selectPendingAndRecalled().stream()
+			.filter(knowledge -> agentId == null || agentId.equals(knowledge.getAgentId()))
+			.toList();
+		for (AgentKnowledge knowledge : pendingKnowledge) {
+			try {
+				retryEmbedding(knowledge.getId());
+			}
+			catch (Exception e) {
+				log.error("Failed to auto-embed agent knowledge id={}: {}", knowledge.getId(), e.getMessage());
+			}
+		}
+		log.info("Agent knowledge pending embedding triggered. Total: {}", pendingKnowledge.size());
+	}
+
 }

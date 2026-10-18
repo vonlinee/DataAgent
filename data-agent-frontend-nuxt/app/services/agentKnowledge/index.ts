@@ -274,6 +274,21 @@ class AgentKnowledgeService {
     }>(`${API_BASE_URL}/statistics/${agentId}`);
     return response.data.data;
   }
+
+  /** Trigger embedding for recalled knowledge that is still pending. */
+  async syncPendingKnowledge(agentId: number): Promise<boolean> {
+    try {
+      const response = await axios.post<{ success: boolean }>(
+        `${API_BASE_URL}/sync-pending`,
+        null,
+        { params: { agentId } },
+      );
+      return response.data.success;
+    } catch (error) {
+      console.error('Failed to sync pending agent knowledge:', error);
+      return false;
+    }
+  }
 }
 
 export default new AgentKnowledgeService();

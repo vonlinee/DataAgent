@@ -33,6 +33,8 @@ public class DataAgentProperties {
 	 */
 	private EmbeddingBatch embeddingBatch = new EmbeddingBatch();
 
+	private EmbeddingRecovery embeddingRecovery = new EmbeddingRecovery();
+
 	private VectorStoreProperties vectorStore = new VectorStoreProperties();
 
 	private ReportTemplate reportTemplate = new ReportTemplate();
@@ -248,6 +250,36 @@ public class DataAgentProperties {
 		 * 每批次最大文本数量 适用于DashScope等有文本数量限制的API DashScope限制为10
 		 */
 		private int maxTextCount = 10;
+
+	}
+
+	@Getter
+	@Setter
+	public static class EmbeddingRecovery {
+
+		/** 业务知识的向量同步策略。 */
+		private SyncPolicy businessKnowledge = new SyncPolicy();
+
+		/** 智能体知识的向量同步策略。 */
+		private SyncPolicy agentKnowledge = new SyncPolicy();
+
+		/** 定时任务首次执行前的延迟，单位毫秒。 */
+		private long initialDelayMs = 300000L;
+
+		/** 定时任务两次执行之间的固定延迟，单位毫秒。 */
+		private long fixedDelayMs = 300000L;
+
+	}
+
+	@Getter
+	@Setter
+	public static class SyncPolicy {
+
+		/** 应用启动完成后是否同步待处理的知识向量。 */
+		private boolean startupSyncEnabled = true;
+
+		/** 是否通过定时任务自动同步待处理的知识向量。 */
+		private boolean scheduledSyncEnabled = true;
 
 	}
 

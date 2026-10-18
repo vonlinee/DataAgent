@@ -114,4 +114,10 @@ public class BusinessKnowledgeController {
 		return ApiResponse.success("success retry embedding");
 	}
 
+	@PostMapping("/sync-pending")
+	public ApiResponse<Boolean> syncPendingKnowledge(@RequestParam(value = "agentId", required = false) Long agentId) {
+		businessKnowledgeService.syncPendingKnowledge(agentId);
+		return ApiResponse.success("success sync pending business knowledge");
+	}
+
 }

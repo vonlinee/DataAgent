@@ -37,6 +37,16 @@
 					刷新
 				</v-btn>
 				<v-btn
+					color="blue-darken-1"
+					prepend-icon="mdi-sync"
+					class="text-none px-6"
+					elevation="0"
+					:loading="syncLoading"
+					@click="handleSyncPending"
+				>
+					同步待处理
+				</v-btn>
+				<v-btn
 					:color="filterVisible ? 'blue-darken-1' : 'blue-grey-lighten-1'"
 					prepend-icon="mdi-filter-variant"
 					class="text-none px-6"
@@ -525,6 +535,7 @@ const total = ref(0);
 const currentEditId = ref<number | null>(null);
 const selectedFile = ref<File | null>(null);
 const retryLoadingMap = ref<Record<number, boolean>>({});
+const syncLoading = ref(false);
 
 const queryParams = reactive<AgentKnowledgeQueryDTO>({
 	agentId: agentId.value,
@@ -781,6 +792,33 @@ async function handleRetry(knowledge: AgentKnowledge) {
 	} finally {
 		retryLoadingMap.value[knowledge.id] = false;
 	}
+}
+
+function handleSyncPending() {
+	showConfirm({
+		title: '确认同步',
+		message:
+			'仅同步当前智能体中处于等待状态的召回知识，不会重复计算已完成向量。',
+		confirmText: '开始同步',
+		icon: 'mdi-sync',
+		onConfirm: async () => {
+			syncLoading.value = true;
+			try {
+				const success = await agentKnowledgeService.syncPendingKnowledge(
+					agentId.value,
+				);
+				$tip(
+					success ? '已触发待处理知识同步' : '同步失败',
+					success ? undefined : { color: 'error', icon: 'mdi-alert-circle' },
+				);
+				if (success) await loadKnowledgeList();
+			} catch {
+				$tip('同步失败', { color: 'error', icon: 'mdi-alert-circle' });
+			} finally {
+				syncLoading.value = false;
+			}
+		},
+	});
 }
 
 function deleteKnowledge(knowledge: AgentKnowledge) {

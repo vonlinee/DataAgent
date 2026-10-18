@@ -18,10 +18,10 @@ package com.alibaba.cloud.ai.dataagent.service.agent;
 import com.alibaba.cloud.ai.dataagent.entity.Agent;
 import com.alibaba.cloud.ai.dataagent.entity.AgentDatasource;
 import com.alibaba.cloud.ai.dataagent.enums.AgentStatus;
-import com.alibaba.cloud.ai.dataagent.enums.EmbeddingStatus;
 import com.alibaba.cloud.ai.dataagent.enums.ModelType;
 import com.alibaba.cloud.ai.dataagent.mapper.AgentKnowledgeMapper;
 import com.alibaba.cloud.ai.dataagent.mapper.BusinessKnowledgeMapper;
+import com.alibaba.cloud.ai.dataagent.properties.DataAgentProperties;
 import com.alibaba.cloud.ai.dataagent.service.aimodelconfig.ModelConfigDataService;
 import com.alibaba.cloud.ai.dataagent.service.business.BusinessKnowledgeService;
 import com.alibaba.cloud.ai.dataagent.service.datasource.AgentDatasourceService;
@@ -62,6 +62,8 @@ public class AgentStartupInitialization implements ApplicationRunner, Disposable
 
 	private final ExecutorService executorService;
 
+	private final DataAgentProperties dataAgentProperties;
+
 	@Override
 	public void run(ApplicationArguments args) {
 		log.info("Starting automatic initialization of published agents...");
@@ -70,7 +72,7 @@ public class AgentStartupInitialization implements ApplicationRunner, Disposable
 			// 因为异步可以让初始化过程在后台运行，不会阻塞Spring启动主线程，提高启动速度和响应性；即使初始化很耗时也不会影响主程序正常启动。
 			CompletableFuture.runAsync(() -> {
 				initializePublishedAgents();
-				recoverPendingEmbeddings();
+				recoverPendingEmbeddings(true);
 			}, executorService).exceptionally(throwable -> {
 				log.error("Error during agent initialization: {}", throwable.getMessage());
 				return null;
@@ -89,19 +91,48 @@ public class AgentStartupInitialization implements ApplicationRunner, Disposable
 	@Scheduled(initialDelayString = "${spring.ai.alibaba.data-agent.embedding-recovery.initial-delay-ms:300000}",
 			fixedDelayString = "${spring.ai.alibaba.data-agent.embedding-recovery.fixed-delay-ms:300000}")
 	public void recoverPendingEmbeddings() {
+		recoverPendingEmbeddings(false);
+	}
+
+	private void recoverPendingEmbeddings(boolean startup) {
+		boolean businessEnabled = startup
+				? dataAgentProperties.getEmbeddingRecovery().getBusinessKnowledge().isStartupSyncEnabled()
+				: dataAgentProperties.getEmbeddingRecovery().getBusinessKnowledge().isScheduledSyncEnabled();
+		boolean agentEnabled = startup ? dataAgentProperties.getEmbeddingRecovery().getAgentKnowledge().isStartupSyncEnabled()
+				: dataAgentProperties.getEmbeddingRecovery().getAgentKnowledge().isScheduledSyncEnabled();
+		if (!businessEnabled && !agentEnabled) {
+			log.info("{} embedding synchronization is disabled", startup ? "Startup" : "Scheduled");
+			return;
+		}
 		if (!hasActiveEmbeddingModel()) {
 			log.warn("No active EMBEDDING model configured; pending knowledge will remain pending");
 			return;
 		}
 		LocalDateTime staleBefore = LocalDateTime.now().minusMinutes(10);
-		int recoveredBusinessJobs = businessKnowledgeMapper.resetStaleProcessing(staleBefore);
-		int recoveredAgentJobs = agentKnowledgeMapper.resetStaleProcessing(staleBefore);
-		if (recoveredBusinessJobs + recoveredAgentJobs > 0) {
-			log.warn("Recovered {} stale business and {} stale agent embedding jobs", recoveredBusinessJobs,
-					recoveredAgentJobs);
+		if (businessEnabled) {
+			try {
+				int recoveredBusinessJobs = businessKnowledgeMapper.resetStaleProcessing(staleBefore);
+				if (recoveredBusinessJobs > 0) {
+					log.warn("Recovered {} stale business embedding jobs", recoveredBusinessJobs);
+				}
+				embedPendingBusinessKnowledge();
+			}
+			catch (Exception e) {
+				log.error("Error during pending business knowledge embedding recovery", e);
+			}
 		}
-		embedPendingBusinessKnowledge();
-		embedPendingAgentKnowledge();
+		if (agentEnabled) {
+			try {
+				int recoveredAgentJobs = agentKnowledgeMapper.resetStaleProcessing(staleBefore);
+				if (recoveredAgentJobs > 0) {
+					log.warn("Recovered {} stale agent embedding jobs", recoveredAgentJobs);
+				}
+				embedPendingAgentKnowledge();
+			}
+			catch (Exception e) {
+				log.error("Error during pending agent knowledge embedding recovery", e);
+			}
+		}
 	}
 
 	private boolean hasActiveEmbeddingModel() {
@@ -229,40 +260,7 @@ public class AgentStartupInitialization implements ApplicationRunner, Disposable
 	 * embedding for each one.
 	 */
 	private void embedPendingBusinessKnowledge() {
-		try {
-			var allKnowledge = businessKnowledgeMapper.selectAll();
-			var pendingKnowledge = allKnowledge.stream()
-				.filter(k -> k.getEmbeddingStatus() == EmbeddingStatus.PENDING)
-				.filter(k -> k.getIsRecall() != null && k.getIsRecall() == 1)
-				.toList();
-
-			if (pendingKnowledge.isEmpty()) {
-				log.info("No pending business knowledge to embed");
-				return;
-			}
-
-			log.info("Found {} pending business knowledge records, starting auto-embedding...",
-					pendingKnowledge.size());
-
-			int successCount = 0;
-			int failureCount = 0;
-			for (var knowledge : pendingKnowledge) {
-				try {
-					businessKnowledgeService.retryEmbedding(knowledge.getId());
-					successCount++;
-				}
-				catch (Exception e) {
-					failureCount++;
-					log.error("Failed to auto-embed business knowledge id={}: {}", knowledge.getId(), e.getMessage());
-				}
-			}
-
-			log.info("Business knowledge auto-embedding completed. Success: {}, Failed: {}", successCount,
-					failureCount);
-		}
-		catch (Exception e) {
-			log.error("Error during pending business knowledge auto-embedding", e);
-		}
+		businessKnowledgeService.syncPendingKnowledge();
 	}
 
 	/**
@@ -274,34 +272,7 @@ public class AgentStartupInitialization implements ApplicationRunner, Disposable
 	 * {@code AgentKnowledgeEventListener}.
 	 */
 	private void embedPendingAgentKnowledge() {
-		try {
-			var pendingKnowledge = agentKnowledgeMapper.selectPendingAndRecalled();
-
-			if (pendingKnowledge.isEmpty()) {
-				log.info("No pending agent knowledge to embed");
-				return;
-			}
-
-			log.info("Found {} pending agent knowledge records, starting auto-embedding...", pendingKnowledge.size());
-
-			int successCount = 0;
-			int failureCount = 0;
-			for (var knowledge : pendingKnowledge) {
-				try {
-					agentKnowledgeService.retryEmbedding(knowledge.getId());
-					successCount++;
-				}
-				catch (Exception e) {
-					failureCount++;
-					log.error("Failed to auto-embed agent knowledge id={}: {}", knowledge.getId(), e.getMessage());
-				}
-			}
-
-			log.info("Agent knowledge auto-embedding triggered. Success: {}, Failed: {}", successCount, failureCount);
-		}
-		catch (Exception e) {
-			log.error("Error during pending agent knowledge auto-embedding", e);
-		}
+		agentKnowledgeService.syncPendingKnowledge();
 	}
 
 	/**

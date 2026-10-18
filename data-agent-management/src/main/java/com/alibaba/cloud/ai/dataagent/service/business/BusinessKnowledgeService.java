@@ -44,4 +44,9 @@ public interface BusinessKnowledgeService {
 
 	void retryEmbedding(Long id);
 
+	/** Trigger embedding for all recalled business knowledge still waiting for vectors. */
+	void syncPendingKnowledge();
+
+	void syncPendingKnowledge(Long agentId);
+
 }
