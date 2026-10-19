@@ -18,19 +18,22 @@ package com.alibaba.cloud.ai.dataagent.controller;
 import com.alibaba.cloud.ai.dataagent.dto.datasource.DatasourceTypeDTO;
 import com.alibaba.cloud.ai.dataagent.dto.schema.CreateLogicalRelationDTO;
 import com.alibaba.cloud.ai.dataagent.dto.schema.UpdateLogicalRelationDTO;
+import com.alibaba.cloud.ai.dataagent.bo.schema.ColumnInfoBO;
+import com.alibaba.cloud.ai.dataagent.bo.schema.TableInfoBO;
 import com.alibaba.cloud.ai.dataagent.entity.Datasource;
 import com.alibaba.cloud.ai.dataagent.entity.LogicalRelation;
 import com.alibaba.cloud.ai.dataagent.enums.BizDataSourceTypeEnum;
 import com.alibaba.cloud.ai.dataagent.exception.InternalServerException;
 import com.alibaba.cloud.ai.dataagent.exception.InvalidInputException;
 import com.alibaba.cloud.ai.dataagent.service.datasource.DatasourceService;
+import com.alibaba.cloud.ai.dataagent.service.datasource.DatasourceMetadataService;
 import com.alibaba.cloud.ai.dataagent.vo.ApiResponse;
 import com.alibaba.cloud.ai.dataagent.vo.DatasourceConnectionTestResult;
 import jakarta.validation.Valid;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-import lombok.AllArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
@@ -51,10 +54,23 @@ import org.springframework.web.server.ResponseStatusException;
 @RestController
 @RequestMapping("/api/datasource")
 @CrossOrigin(origins = "*")
-@AllArgsConstructor
 public class DatasourceController {
 
 	private final DatasourceService datasourceService;
+
+	private final DatasourceMetadataService datasourceMetadataService;
+
+	/** Keep the legacy constructor available for existing controller tests and integrations. */
+	public DatasourceController(DatasourceService datasourceService) {
+		this(datasourceService, null);
+	}
+
+	@Autowired
+	public DatasourceController(DatasourceService datasourceService,
+			DatasourceMetadataService datasourceMetadataService) {
+		this.datasourceService = datasourceService;
+		this.datasourceMetadataService = datasourceMetadataService;
+	}
 
 	/**
 	 * Get all data source list
@@ -114,6 +130,17 @@ public class DatasourceController {
 		checkDatasourceExists(id);
 		try {
 			return datasourceService.getDatasourceTables(id);
+		}
+		catch (Exception e) {
+			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+		}
+	}
+
+	@GetMapping("/{id}/tables/details")
+	public List<TableInfoBO> getDatasourceTableDetails(@PathVariable Integer id) {
+		checkDatasourceExists(id);
+		try {
+			return datasourceMetadataService.getDatasourceTableDetails(id);
 		}
 		catch (Exception e) {
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
@@ -205,6 +232,18 @@ public class DatasourceController {
 		}
 		catch (Exception e) {
 			throw new InternalServerException("获取字段列表失败：" + e.getMessage());
+		}
+	}
+
+	@GetMapping("/{id}/tables/{tableName}/columns/details")
+	public ApiResponse<List<ColumnInfoBO>> getTableColumnDetails(@PathVariable Integer id,
+			@PathVariable String tableName) {
+		try {
+			List<ColumnInfoBO> columns = datasourceMetadataService.getTableColumnDetails(id, tableName);
+			return ApiResponse.success("获取字段详情成功", columns);
+		}
+		catch (Exception e) {
+			throw new InternalServerException("获取字段详情失败：" + e.getMessage());
 		}
 	}
 

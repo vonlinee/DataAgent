@@ -106,6 +106,22 @@ export interface LogicalRelation {
   description?: string;
 }
 
+export interface TableMetadata {
+  schema?: string;
+  name: string;
+  description?: string;
+  type?: string;
+}
+
+export interface ColumnMetadata {
+  name: string;
+  tableName?: string;
+  description?: string;
+  type?: string;
+  primary?: boolean;
+  notnull?: boolean;
+}
+
 /**
  * @description 创建逻辑外键关系的 DTO
  */
@@ -179,6 +195,16 @@ class DatasourceService {
     }
   }
 
+  async getDatasourceTableDetails(id: number): Promise<TableMetadata[]> {
+    try {
+      const response = await axios.get<TableMetadata[]>(`${API_BASE_URL}/${id}/tables/details`);
+      return response.data ?? [];
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.status === 400) return [];
+      throw error;
+    }
+  }
+
   /**
    * @description 获取指定表的列名列表
    * @param {number} datasourceId - 数据源 ID
@@ -189,6 +215,17 @@ class DatasourceService {
     try {
       const response = await axios.get<ApiResponse<string[]>>(
         `${API_BASE_URL}/${datasourceId}/tables/${encodeURIComponent(tableName)}/columns`,
+      );
+      return response.data.data ?? [];
+    } catch {
+      return [];
+    }
+  }
+
+  async getTableColumnDetails(datasourceId: number, tableName: string): Promise<ColumnMetadata[]> {
+    try {
+      const response = await axios.get<ApiResponse<ColumnMetadata[]>>(
+        `${API_BASE_URL}/${datasourceId}/tables/${encodeURIComponent(tableName)}/columns/details`,
       );
       return response.data.data ?? [];
     } catch {

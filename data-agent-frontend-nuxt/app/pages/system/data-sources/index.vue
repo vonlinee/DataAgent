@@ -234,6 +234,7 @@
 							<ExpandedTableManager
 								v-model:selected-tables="selectedTables[item.id!]"
 								:all-tables="tableLists[item.id!] ?? []"
+								:datasource-id="item.id!"
 								:loading-tables="loadingTablesId === item.id"
 								:fetch-error="!!(item.id && tableFetchError[item.id])"
 								:updating="updatingTablesId === item.id"
@@ -263,7 +264,7 @@
 </template>
 
 <script setup lang="ts">
-import datasourceService, { type Datasource } from '@/services/datasource';
+import datasourceService, { type Datasource, type TableMetadata } from '@/services/datasource';
 import agentDatasourceService from '@/services/agentDatasource';
 import DatasourceFormDialog from './DatasourceFormDialog.vue';
 import ForeignKeyDialog from './ForeignKeyDialog.vue';
@@ -280,7 +281,7 @@ const togglingStatusId = ref<number | null>(null);
 const bindingDatasourceId = ref<number | null>(null);
 const datasourceList = ref<Datasource[]>([]);
 const expandedRows = ref<readonly string[]>([]);
-const tableLists = ref<Record<number, string[]>>({});
+const tableLists = ref<Record<number, TableMetadata[]>>({});
 const selectedTables = ref<Record<number, string[]>>({});
 const loadingTablesId = ref<number | null>(null);
 const tableFetchError = ref<Record<number, boolean>>({});
@@ -557,7 +558,7 @@ async function fetchTablesForDatasource(datasourceId: number) {
 	loadingTablesId.value = datasourceId;
 	tableFetchError.value = { ...tableFetchError.value, [datasourceId]: false };
 	try {
-		const tables = await datasourceService.getDatasourceTables(datasourceId);
+		const tables = await datasourceService.getDatasourceTableDetails(datasourceId);
 		tableLists.value[datasourceId] = tables ?? [];
 		if (!selectedTables.value[datasourceId])
 			selectedTables.value[datasourceId] = [];
