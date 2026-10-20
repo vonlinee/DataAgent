@@ -148,7 +148,7 @@ public class SchemaServiceImpl implements SchemaService {
 			// 处理表和列
 			log.debug("Fetching tables for datasource: {}", datasourceId);
 			List<TableInfoBO> tables = dbAccessor.fetchTables(config, dqp);
-			log.info("Found  tables for datasource: {}", tables.size(), datasourceId);
+			log.info("Found {} tables for datasource: {}", tables.size(), datasourceId);
 
 			if (tables.size() > 5) {
 				// 对于大量表，使用并行处理
@@ -168,7 +168,7 @@ public class SchemaServiceImpl implements SchemaService {
 			List<Document> tableDocs = convertTablesToDocuments(datasourceId, tables);
 
 			// 存储文档
-			log.info("Storing  columns and {} tables for datasource: {}", columnDocs.size(), tableDocs.size(),
+			log.info("Storing {} columns and {} tables for datasource: {}", columnDocs.size(), tableDocs.size(),
 					datasourceId);
 			replaceSchemaDocuments(datasourceId, columnDocs, tableDocs);
 			log.info("Successfully stored all documents for datasource: {}", datasourceId);
