@@ -289,7 +289,9 @@ public class DataAgentConfiguration implements DisposableBean {
 		GraphRepresentation graphRepresentation = stateGraph.getGraph(GraphRepresentation.Type.PLANTUML,
 				"workflow graph");
 
-		log.info("workflow in PlantUML format as follows \n\n" + graphRepresentation.content() + "\n\n");
+		if (log.isDebugEnabled()) {
+			log.debug("workflow in PlantUML format as follows \n\n{}\n\n", graphRepresentation.content());
+		}
 
 		return stateGraph;
 	}

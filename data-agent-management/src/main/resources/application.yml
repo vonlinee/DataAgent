@@ -107,3 +107,4 @@ logging:
     com.alibaba.cloud.ai.dataagent.workflow.node: info
     com.alibaba.cloud.ai.mapper: info
     org.springframework.jdbc: info
+    com.alibaba.cloud.ai.dataagent.config.DataAgentConfiguration: info
