@@ -40,7 +40,12 @@
 			</v-btn>
 		</div>
 
-		<v-timeline density="compact" side="end" truncate-line="both">
+		<v-timeline
+			class="workflow-steps"
+			density="compact"
+			side="end"
+			truncate-line="both"
+		>
 			<v-timeline-item
 				v-for="step in timelineSteps"
 				:key="step.stepId"
@@ -425,6 +430,11 @@ watch(
 <style scoped>
 .workflow-timeline {
 	width: 100%;
+}
+
+:deep(.workflow-steps.v-timeline--vertical) {
+	height: auto;
+	row-gap: 6px;
 }
 
 /* ── Title bar ───────────────────────────────────────────────────────────────── */
