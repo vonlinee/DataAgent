@@ -31,6 +31,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -124,6 +125,20 @@ class AgentServiceImplTest {
 		agentService.deleteById(1L);
 
 		verify(agentKnowledgeMapper).deleteByAgentId(1);
+		verify(agentMapper).deleteById(1L);
+	}
+
+	@Test
+	void deleteById_dataUriAvatar_doesNotTreatAvatarAsStoredFile() {
+		String avatar = "data:image/svg+xml;charset=utf-8,%3Csvg%20width%3D%22200%22%20height%3D%22200%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Crect%20width%3D%22200%22%20height%3D%22200%22%20fill%3D%22%238B5CF6%22%2F%3E%3Ctext%20x%3D%22100%22%20y%3D%22120%22%20font-family%3D%22Arial%2C%20sans-serif%22%20font-size%3D%2248%22%20font-weight%3D%22bold%22%20text-anchor%3D%22middle%22%20fill%3D%22white%22%3E%E6%95%B0%E6%8D%AE%3C%2Ftext%3E%3C%2Fsvg%3E";
+		when(agentMapper.findById(1L)).thenReturn(Agent.builder().id(1L).avatar(avatar).build());
+		when(agentKnowledgeMapper.selectByAgentIdIncludeDeleted(1)).thenReturn(List.of());
+		when(agentVectorStoreService.deleteDocumentsByMetadata(eq("1"), any())).thenReturn(true);
+		when(agentMapper.deleteById(1L)).thenReturn(1);
+
+		assertDoesNotThrow(() -> agentService.deleteById(1L));
+
+		verify(fileStorageService, never()).deleteFile(anyString());
 		verify(agentMapper).deleteById(1L);
 	}
 
