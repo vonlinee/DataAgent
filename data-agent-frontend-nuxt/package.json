@@ -21,6 +21,7 @@
     "highlight.js": "^11.11.1",
     "markdown-it": "^14.1.1",
     "markdown-it-container": "^4.0.0",
+    "monaco-editor": "^0.57.0",
     "nuxt": "^4.3.0",
     "pinia": "^3.0.4",
     "pnpm": "^11.9.0",

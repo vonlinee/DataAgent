@@ -268,3 +268,25 @@ CREATE TABLE IF NOT EXISTS `model_config` (
   `proxy_password` varchar(255) DEFAULT NULL COMMENT '代理密码（可选）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS agent_skill (
+   id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+   skill_name VARCHAR(80) NOT NULL,
+   description TEXT DEFAULT NULL,
+   root_dir VARCHAR(120) NOT NULL,
+   is_deleted TINYINT NOT NULL DEFAULT 0,
+   created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+COMMENT ON COLUMN agent_skill.id IS '主键ID';
+COMMENT ON COLUMN agent_skill.skill_name IS 'Skill名称';
+COMMENT ON COLUMN agent_skill.root_dir IS 'Skill文件根目录';
+COMMENT ON COLUMN agent_skill.is_deleted IS '删除标记：0-未删除，1-已删除';
+COMMENT ON COLUMN agent_skill.created_time IS '创建时间';
+COMMENT ON COLUMN agent_skill.updated_time IS '更新时间';
+ALTER TABLE agent_skill ADD COLUMN IF NOT EXISTS description TEXT DEFAULT NULL;
+COMMENT ON COLUMN agent_skill.description IS 'Skill描述';
+CREATE UNIQUE INDEX IF NOT EXISTS uk_agent_skill_name ON agent_skill (skill_name);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_agent_skill_root_dir ON agent_skill (root_dir);
+CREATE INDEX IF NOT EXISTS idx_agent_skill_is_deleted ON agent_skill (is_deleted);
+CREATE INDEX IF NOT EXISTS idx_agent_skill_name ON agent_skill (skill_name);

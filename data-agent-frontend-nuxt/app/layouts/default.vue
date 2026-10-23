@@ -171,7 +171,6 @@
 								title="提示词配置"
 								@click="navigateToPath('/prompt-config')"
 							/>
-
 							<v-list-group value="knowledge">
 								<template #activator="{ props }">
 									<v-list-item
@@ -243,6 +242,15 @@
 									class="rounded-lg mb-1 navigation-sub-item"
 									color="primary"
 									@click="navigateToPath('/system/model-config')"
+								/>
+								<v-list-item
+									prepend-icon="mdi-puzzle-outline"
+									title="Skill 管理"
+									:active="isActive('/system/skills')"
+									density="compact"
+									class="rounded-lg mb-1 navigation-sub-item"
+									color="primary"
+									@click="navigateToPath('/system/skills')"
 								/>
 							</v-list-group>
 
@@ -353,6 +361,7 @@ const routeTitleMap: Record<string, string> = {
 	'/knowledge/business': '业务知识配置',
 	'/knowledge/agents': '智能体知识库',
 	'/knowledge/semantic-models': '语义模型配置',
+	'/system/skills': 'Skill 管理',
 	'/system/data-sources': '数据连接',
 	'/system/model-config': '模型配置',
 	'/system/settings': '通用设置',
@@ -497,6 +506,9 @@ watch(
 	() => route.fullPath,
 	() => {
 		syncSelectedFromRoute();
+		if (route.path === '/system/skills' && !openedGroups.value.includes('system')) {
+			openedGroups.value.push('system');
+		}
 	},
 );
 </script>

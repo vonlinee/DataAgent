@@ -269,3 +269,19 @@ CREATE TABLE IF NOT EXISTS `model_config` (
     `proxy_password` varchar(255) DEFAULT NULL COMMENT '代理密码（可选）',
     PRIMARY KEY (`id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Skill 元数据表
+CREATE TABLE IF NOT EXISTS agent_skill (
+  id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  skill_name VARCHAR(80) NOT NULL COMMENT 'Skill名称',
+  description TEXT DEFAULT NULL COMMENT 'Skill描述',
+  root_dir VARCHAR(120) NOT NULL COMMENT 'Skill文件根目录',
+  is_deleted TINYINT NOT NULL DEFAULT 0 COMMENT '删除标记：0-未删除，1-已删除',
+  created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_agent_skill_name (skill_name),
+  UNIQUE KEY uk_agent_skill_root_dir (root_dir),
+  INDEX idx_agent_skill_is_deleted (is_deleted),
+  INDEX idx_agent_skill_name (skill_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Skill元数据表';
