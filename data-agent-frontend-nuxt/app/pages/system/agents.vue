@@ -169,6 +169,14 @@
 					</v-chip>
 				</template>
 
+				<!-- Implementation Type Column -->
+				<!-- eslint-disable-next-line vue/valid-v-slot -->
+				<template #item.agentType="{ item }">
+					<v-chip size="small" :color="getAgentTypeColor(item.agentType)" variant="tonal">
+						{{ getAgentTypeText(item.agentType) }}
+					</v-chip>
+				</template>
+
 				<!-- Create Time Column -->
 				<!-- eslint-disable-next-line vue/valid-v-slot -->
 				<template #item.createTime="{ item }">
@@ -300,6 +308,19 @@
 						</div>
 
 						<div class="mb-2">
+							<p class="text-body-2 font-weight-medium text-grey-darken-2 mb-2">实现方式</p>
+							<v-select
+								v-model="editForm.agentType"
+								:items="agentTypeOptions"
+								item-title="label"
+								item-value="value"
+								variant="outlined"
+								density="compact"
+								hide-details
+							/>
+						</div>
+
+						<div class="mb-2">
 							<p class="text-body-2 font-weight-medium text-grey-darken-2 mb-2">状态</p>
 							<v-select
 								v-model="editForm.status"
@@ -406,6 +427,7 @@ const {
 		category: '',
 		tags: '',
 		status: 'draft',
+		agentType: 'workflow',
 	}),
 });
 
@@ -423,6 +445,7 @@ const headers = [
 	{ title: '智能体', key: 'name', minWidth: '200px', sortable: false },
 	{ title: '描述', key: 'description', minWidth: '250px', sortable: false },
 	{ title: '标签', key: 'tags', width: '220px', sortable: false },
+	{ title: '实现方式', key: 'agentType', width: '150px', sortable: false },
 	{ title: '状态', key: 'status', width: '100px', sortable: false },
 	{ title: '创建时间', key: 'createTime', width: '170px', sortable: false },
 	{ title: '操作', key: 'actions', width: '120px', sortable: false, align: 'center' as const },
@@ -432,6 +455,11 @@ const statusOptions = [
 	{ label: '草稿', value: 'draft' },
 	{ label: '已发布', value: 'published' },
 	{ label: '已下线', value: 'offline' },
+];
+
+const agentTypeOptions = [
+	{ label: 'Workflow（工作流）', value: 'workflow' },
+	{ label: 'Agentic（自主智能体）', value: 'agentic' },
 ];
 
 const publishedCount = computed(() => agents.value.filter(a => a.status === 'published').length);
@@ -482,6 +510,7 @@ async function saveEdit() {
 			description: editForm.value.description?.trim(),
 			category: editForm.value.category?.trim(),
 			tags: editForm.value.tags?.trim(),
+			agentType: editForm.value.agentType || 'workflow',
 			status: editForm.value.status,
 		});
 		if (result) {
@@ -534,6 +563,12 @@ const getInitials = (name?: string) => {
 	if (!name) return 'AI';
 	return name.substring(0, 2).toUpperCase();
 };
+
+const getAgentTypeText = (agentType?: string) =>
+	agentType === 'agentic' ? 'Agentic' : 'Workflow';
+
+const getAgentTypeColor = (agentType?: string) =>
+	agentType === 'agentic' ? 'deep-purple' : 'blue';
 
 const parseTags = (tags?: string) => {
 	if (!tags || tags.trim() === '') return [];

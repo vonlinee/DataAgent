@@ -3,6 +3,7 @@
 -- 智能体表
 CREATE TABLE IF NOT EXISTS agent (
     id INT NOT NULL AUTO_INCREMENT,
+    agent_type VARCHAR(32) NOT NULL DEFAULT 'workflow' COMMENT 'Agent实现方式：workflow-工作流，agentic-智能体自主编排',
     name VARCHAR(255) NOT NULL COMMENT '智能体名称',
     description TEXT COMMENT '智能体描述',
     avatar TEXT COMMENT '头像URL',
@@ -16,6 +17,7 @@ CREATE TABLE IF NOT EXISTS agent (
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
+    INDEX idx_agent_type (agent_type),
     INDEX idx_agent_name (name),
     INDEX idx_agent_status (status),
     INDEX idx_agent_category (category),

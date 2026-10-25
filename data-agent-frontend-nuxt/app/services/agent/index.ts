@@ -33,6 +33,8 @@ export interface Agent {
 	description?: string;
 	/** 智能体头像 URL */
 	avatar?: string;
+	/** Agent implementation type (workflow or agentic) */
+	agentType?: AgentType;
 	/** 状态 (draft, published, offline) */
 	status?: string;
 	/** API Key */
@@ -54,6 +56,8 @@ export interface Agent {
 	/** 是否启用人工审核 (0 或 1) */
 	humanReviewEnabled?: number | boolean;
 }
+
+export type AgentType = 'workflow' | 'agentic';
 
 const API_BASE_URL = '/api/agent';
 
@@ -138,6 +142,7 @@ class AgentService {
 				name: agent.name,
 				description: agent.description,
 				avatar: agent.avatar,
+				agentType: agent.agentType,
 				status: agent.status,
 				prompt: agent.prompt,
 				category: agent.category,

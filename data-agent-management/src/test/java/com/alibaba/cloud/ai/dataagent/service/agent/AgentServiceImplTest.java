@@ -95,8 +95,27 @@ class AgentServiceImplTest {
 
 		assertNotNull(agent.getCreateTime());
 		assertNotNull(agent.getUpdateTime());
+		assertEquals("workflow", agent.getAgentType());
 		assertEquals(0, agent.getApiKeyEnabled());
 		verify(agentMapper).insert(agent);
+	}
+
+	@Test
+	void save_newAgent_preservesAgenticImplementationType() {
+		Agent agent = Agent.builder().agentType("agentic").build();
+
+		agentService.save(agent);
+
+		assertEquals("agentic", agent.getAgentType());
+		verify(agentMapper).insert(agent);
+	}
+
+	@Test
+	void save_rejectsUnsupportedImplementationType() {
+		Agent agent = Agent.builder().agentType("unknown").build();
+
+		assertThrows(IllegalArgumentException.class, () -> agentService.save(agent));
+		verify(agentMapper, never()).insert(agent);
 	}
 
 	@Test

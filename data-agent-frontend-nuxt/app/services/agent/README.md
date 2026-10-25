@@ -33,6 +33,8 @@ export interface Agent {
 	description?: string;
 	/** 智能体头像 URL */
 	avatar?: string;
+	/** 实现方式 (workflow 或 agentic) */
+	agentType?: 'workflow' | 'agentic';
 	/** 状态 (draft, published, offline) */
 	status?: string;
 	/** API Key */

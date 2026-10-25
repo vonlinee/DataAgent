@@ -17,6 +17,7 @@ package com.alibaba.cloud.ai.dataagent.service.agent;
 
 import com.alibaba.cloud.ai.dataagent.entity.Agent;
 import com.alibaba.cloud.ai.dataagent.entity.AgentKnowledge;
+import com.alibaba.cloud.ai.dataagent.enums.AgentType;
 import com.alibaba.cloud.ai.dataagent.mapper.AgentKnowledgeMapper;
 import com.alibaba.cloud.ai.dataagent.mapper.AgentMapper;
 import com.alibaba.cloud.ai.dataagent.security.ApiKeyCredentialService;
@@ -76,9 +77,13 @@ public class AgentServiceImpl implements AgentService {
 	@Override
 	public Agent save(Agent agent) {
 		LocalDateTime now = LocalDateTime.now();
+		validateAgentType(agent.getAgentType());
 
 		if (agent.getId() == null) {
 			// Add
+			if (agent.getAgentType() == null || agent.getAgentType().isBlank()) {
+				agent.setAgentType(AgentType.defaultValue());
+			}
 			agent.setCreateTime(now);
 			agent.setUpdateTime(now);
 			if (agent.getApiKeyEnabled() == null) {
@@ -89,6 +94,9 @@ public class AgentServiceImpl implements AgentService {
 		}
 		else {
 			// Update
+			if (agent.getAgentType() != null && agent.getAgentType().isBlank()) {
+				agent.setAgentType(AgentType.defaultValue());
+			}
 			agent.setUpdateTime(now);
 			if (agent.getApiKeyEnabled() == null) {
 				agent.setApiKeyEnabled(0);
@@ -176,6 +184,12 @@ public class AgentServiceImpl implements AgentService {
 			throw new IllegalArgumentException("Agent not found: " + id);
 		}
 		return agent;
+	}
+
+	private void validateAgentType(String agentType) {
+		if (agentType != null && !agentType.isBlank() && !AgentType.isSupported(agentType)) {
+			throw new IllegalArgumentException("Unsupported agent type: " + agentType);
+		}
 	}
 
 	private boolean isDataUri(String value) {

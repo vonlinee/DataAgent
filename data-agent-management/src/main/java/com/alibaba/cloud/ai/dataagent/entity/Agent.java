@@ -15,6 +15,7 @@
  */
 package com.alibaba.cloud.ai.dataagent.entity;
 
+import com.alibaba.cloud.ai.dataagent.enums.AgentType;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
@@ -40,6 +41,9 @@ public class Agent {
 	private String description; // Agent description
 
 	private String avatar; // Avatar URL
+
+	@Builder.Default
+	private String agentType = AgentType.WORKFLOW.getValue(); // Agent implementation type: workflow or agentic
 
 	// todo: 改为枚举
 	private String status; // Status: draft-pending publication, published-published,

@@ -109,6 +109,21 @@
 							hide-details="auto"
 						/>
 					</v-col>
+					<v-col cols="12" md="6">
+						<p class="text-body-2 font-weight-medium text-grey-darken-2 mb-2">
+							实现方式 <span class="text-error">*</span>
+						</p>
+						<v-select
+							v-model="agentForm.agentType"
+							:items="agentTypeOptions"
+							item-title="label"
+							item-value="value"
+							variant="outlined"
+							density="compact"
+							:rules="[(v) => !!v || '请选择实现方式']"
+							hide-details="auto"
+						/>
+					</v-col>
 					<v-col cols="12">
 						<p class="text-body-2 font-weight-medium text-grey-darken-2 mb-2">
 							描述
@@ -186,6 +201,11 @@ const statusOptions = [
 	{ label: '已下线', value: 'offline' },
 ];
 
+const agentTypeOptions = [
+	{ label: 'Workflow（工作流）', value: 'workflow' },
+	{ label: 'Agentic（自主智能体）', value: 'agentic' },
+];
+
 const agentForm = reactive({
 	name: '',
 	description: '',
@@ -194,6 +214,7 @@ const agentForm = reactive({
 	tags: '',
 	prompt: '',
 	status: 'draft',
+	agentType: 'workflow',
 	humanReviewEnabled: false,
 });
 
@@ -280,6 +301,7 @@ async function createAgent() {
 			tags: agentForm.tags.trim(),
 			prompt: agentForm.prompt.trim(),
 			status: agentForm.status,
+			agentType: agentForm.agentType,
 			humanReviewEnabled: agentForm.humanReviewEnabled ? 1 : 0,
 		};
 		const result = await agentService.create(payload);
