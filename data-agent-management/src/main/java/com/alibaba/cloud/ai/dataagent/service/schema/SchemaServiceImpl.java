@@ -33,7 +33,7 @@ import com.alibaba.cloud.ai.dataagent.dto.schema.TableDTO;
 import com.alibaba.cloud.ai.dataagent.service.vectorstore.AgentVectorStoreService;
 import com.alibaba.cloud.ai.dataagent.service.vectorstore.DynamicFilterService;
 import com.fasterxml.jackson.core.type.TypeReference;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -41,6 +41,7 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.embedding.BatchingStrategy;
 import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
@@ -60,7 +61,7 @@ import static com.alibaba.cloud.ai.dataagent.util.DocumentConverterUtil.convertT
  */
 @Slf4j
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class SchemaServiceImpl implements SchemaService {
 
 	private final ExecutorService dbOperationExecutor;
@@ -79,6 +80,9 @@ public class SchemaServiceImpl implements SchemaService {
 	 * Vector storage service
 	 */
 	private final AgentVectorStoreService agentVectorStoreService;
+
+	@Value("${spring.ai.alibaba.data-agent.embedding-recovery.schema-documents.sync-with-schema:false}")
+	private boolean syncSchemaDocuments;
 
 	@Override
 	public void buildSchemaFromDocuments(String agentId, List<Document> currentColumnDocuments,
@@ -170,7 +174,11 @@ public class SchemaServiceImpl implements SchemaService {
 			// 存储文档
 			log.info("Storing {} columns and {} tables for datasource: {}", columnDocs.size(), tableDocs.size(),
 					datasourceId);
-			replaceSchemaDocuments(datasourceId, columnDocs, tableDocs);
+
+            if (syncSchemaDocuments) {
+                log.info("Storing {} columns and {} tables for datasource: {}", datasourceId, columnDocs.size(), tableDocs.size());
+                replaceSchemaDocuments(datasourceId, columnDocs, tableDocs);
+            }
 			log.info("Successfully stored all documents for datasource: {}", datasourceId);
 			return true;
 		}

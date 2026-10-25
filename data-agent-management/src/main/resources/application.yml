@@ -42,14 +42,17 @@ spring:
           fixed-delay-ms: ${DATA_AGENT_EMBEDDING_RECOVERY_FIXED_DELAY_MS:300000}
           business-knowledge:
             # 应用启动完成后是否同步待处理的业务知识向量。
-            startup-sync-enabled: ${DATA_AGENT_BUSINESS_EMBEDDING_STARTUP_SYNC_ENABLED:true}
+            startup-sync-enabled: ${DATA_AGENT_BUSINESS_EMBEDDING_STARTUP_SYNC_ENABLED:false}
             # 是否通过定时任务自动同步待处理的业务知识向量。
-            scheduled-sync-enabled: ${DATA_AGENT_BUSINESS_EMBEDDING_SCHEDULED_SYNC_ENABLED:true}
+            scheduled-sync-enabled: ${DATA_AGENT_BUSINESS_EMBEDDING_SCHEDULED_SYNC_ENABLED:false}
           agent-knowledge:
             # 应用启动完成后是否同步待处理的智能体知识向量。
-            startup-sync-enabled: ${DATA_AGENT_AGENT_EMBEDDING_STARTUP_SYNC_ENABLED:true}
+            startup-sync-enabled: ${DATA_AGENT_AGENT_EMBEDDING_STARTUP_SYNC_ENABLED:false}
             # 是否通过定时任务自动同步待处理的智能体知识向量。
-            scheduled-sync-enabled: ${DATA_AGENT_AGENT_EMBEDDING_SCHEDULED_SYNC_ENABLED:true}
+            scheduled-sync-enabled: ${DATA_AGENT_AGENT_EMBEDDING_SCHEDULED_SYNC_ENABLED:false}
+          schema-documents:
+            # 是否更新 Schema 时更新 Schema 相关的文档向量
+            sync-with-schema: ${DATA_AGENT_AGENT_EMBEDDING_SCHEDULED_SYNC_ENABLED:false}
         vector-store:
           table-topk-limit: 10
           table-similarity-threshold: 0.2
