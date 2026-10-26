@@ -122,8 +122,8 @@
 import DOMPurify from 'dompurify';
 import { useEchartsRenderer } from '~/composables/useEchartsRenderer';
 import { hljs } from '~/utils/markdown/markdown-plugin-highlight';
-import { TextType, type GraphNodeResponse } from '~/services/graph/index';
-import type { ResultData } from '~/services/resultSet/index';
+import { TextType, type GraphNodeResponse } from '~/services/graph';
+import type { ResultData } from '~/services/resultSet';
 import ChatResultSet from './ChatResultSet.vue';
 import { useChatStore } from '~/stores/chat';
 import {

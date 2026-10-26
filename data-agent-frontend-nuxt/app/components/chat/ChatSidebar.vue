@@ -176,7 +176,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useChatStore, type ExtendedChatSession } from '~/stores/chat';
-import type { ChatSession } from '~/services/chat/index';
+import type { ChatSession } from '~/services/chat';
 
 const store = useChatStore();
 const showDeleteConfirm = ref(false);

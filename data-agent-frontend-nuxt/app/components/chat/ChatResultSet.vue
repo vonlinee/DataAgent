@@ -61,7 +61,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { ResultData } from '~/services/resultSet/index';
+import type { ResultData } from '~/services/resultSet';
 
 const props = defineProps<{
 	data: ResultData | null;
