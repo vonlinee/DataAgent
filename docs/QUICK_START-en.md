@@ -229,6 +229,22 @@ Run the following command from the project root:
 
 Or run `DataAgentApplication.java` directly in your IDE.
 
+### 3.1 One-command Windows startup
+
+Windows users can run `scripts\start-local.cmd` from the project root. The script prefers two named Windows Terminal tabs for the frontend and backend, then falls back to PowerShell windows and finally cmd windows. By default it stops the frontend and backend processes from the previous script invocation, packages the backend, and runs the resulting jar:
+
+```powershell
+.\scripts\start-local.cmd
+```
+
+To skip backend packaging and use Spring Boot's development mode:
+
+```powershell
+.\scripts\start-local.cmd -BackendNoPackage
+```
+
+Add `-KeepPrevious` to leave processes from the previous invocation running. Run `scripts\start-local.ps1 -Help` for all options.
+
 ## 4. Start Web Frontend
 
 Navigate to the `data-agent-frontend-nuxt` directory.

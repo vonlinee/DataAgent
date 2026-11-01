@@ -225,6 +225,22 @@ export DATAAGENT_PYPI_INDEX_URL=https://pypi.org/simple
 
 或者在IDE中直接运行 `DataAgentApplication.java`。
 
+### 3.1 Windows 本地一键启动
+
+Windows 用户可以从项目根目录执行 `scripts\start-local.cmd`。脚本优先使用 Windows Terminal 的两个命名 Tab，依次启动前端和后端；不可用时会回退到 PowerShell 窗口，再回退到 cmd 窗口。默认会先停止上一次由脚本启动的前后端进程，并在后端打包成功后运行 jar：
+
+```powershell
+.\scripts\start-local.cmd
+```
+
+如需跳过后端打包，直接使用 Spring Boot 开发模式：
+
+```powershell
+.\scripts\start-local.cmd -BackendNoPackage
+```
+
+如需保留上一次启动的进程，增加 `-KeepPrevious`；完整参数说明可执行 `scripts\start-local.ps1 -Help` 查看。
+
 ## 🌐 4. 启动WEB页面
 
 进入 `data-agent-frontend-nuxt` 目录
