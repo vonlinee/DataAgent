@@ -66,3 +66,4 @@ uploads/*
 spring-ai-alibaba-1.1.0.0/
 .gstack/
 .codegraph/
+/~/dataagent/skills
