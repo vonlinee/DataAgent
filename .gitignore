@@ -39,6 +39,7 @@ target/
 # windows os
 /extensions/
 /h2-data/
+/scripts/.start-local/
 
 # checkstyle report files
 **/checkstyle-report.xml
