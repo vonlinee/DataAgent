@@ -18,6 +18,7 @@ package com.alibaba.cloud.ai.dataagent.connector.pool;
 import com.alibaba.cloud.ai.dataagent.bo.DbConfigBO;
 import com.alibaba.cloud.ai.dataagent.enums.ErrorCodeEnum;
 
+import javax.sql.DataSource;
 import java.sql.Connection;
 
 /**
@@ -44,5 +45,7 @@ public interface DBConnectionPool extends AutoCloseable {
 	boolean supportedDataSourceType(String type);
 
 	String getConnectionPoolType();
+
+	DataSource getDataSource(DbConfigBO config);
 
 }

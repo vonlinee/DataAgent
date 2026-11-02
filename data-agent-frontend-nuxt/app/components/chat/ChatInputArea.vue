@@ -1,25 +1,17 @@
-/*
- * Copyright 2026 the original author or authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+/* * Copyright 2026 the original author or authors. * * Licensed under the
+Apache License, Version 2.0 (the "License"); * you may not use this file except
+in compliance with the License. * You may obtain a copy of the License at * *
+https://www.apache.org/licenses/LICENSE-2.0 * * Unless required by applicable
+law or agreed to in writing, software * distributed under the License is
+distributed on an "AS IS" BASIS, * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. * See the License for the specific language governing
+permissions and * limitations under the License. */
 
 <template>
 	<div class="input-area">
 		<!-- Status / Info bar -->
 		<div class="status-bar">
 			<div class="status-chips">
-
 				<!-- Datasource selector -->
 				<div class="ds-chip-wrap" @click.stop>
 					<div
@@ -29,7 +21,9 @@
 					>
 						<v-icon size="13" color="#64748b">mdi-database-outline</v-icon>
 						<span>{{ store.activeDatasource?.name || '选择数据库' }}</span>
-						<v-icon size="13" color="#94a3b8">{{ showDsMenu ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
+						<v-icon size="13" color="#94a3b8">{{
+							showDsMenu ? 'mdi-chevron-up' : 'mdi-chevron-down'
+						}}</v-icon>
 					</div>
 					<div v-if="showDsMenu" class="chip-dropdown">
 						<div
@@ -49,12 +43,18 @@
 				<div class="ds-chip-wrap" @click.stop>
 					<div
 						class="status-chip status-chip--model"
-						:class="{ disabled: store.isStreaming || store.chatModels.length === 0 }"
+						:class="{
+							disabled: store.isStreaming || store.chatModels.length === 0,
+						}"
 						@click="toggleModelMenu"
 					>
 						<v-icon size="13" color="#3b82f6">mdi-lightning-bolt</v-icon>
-						<span>{{ store.activeModelConfig?.modelName || '选择AI模型' }}</span>
-						<v-icon size="13" color="#94a3b8">{{ showModelMenu ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
+						<span>{{
+							store.activeModelConfig?.modelName || '选择AI模型'
+						}}</span>
+						<v-icon size="13" color="#94a3b8">{{
+							showModelMenu ? 'mdi-chevron-up' : 'mdi-chevron-down'
+						}}</v-icon>
 					</div>
 					<div v-if="showModelMenu" class="chip-dropdown">
 						<div
@@ -69,7 +69,6 @@
 						</div>
 					</div>
 				</div>
-
 			</div>
 		</div>
 
@@ -82,7 +81,7 @@
 				:disabled="store.isStreaming || store.showHumanFeedback"
 				placeholder="在这里提问，例如：'分析上月各产品的销售增长情况'..."
 				rows="3"
-				@keydown.enter.exact.prevent="handleSend"
+				@keydown="handleKeydown"
 				@input="autoResize"
 			/>
 		</div>
@@ -91,7 +90,10 @@
 		<div class="action-bar">
 			<div class="action-bar-left">
 				<div class="extra-options">
-					<label class="option-chip" :class="{ active: store.requestOptions.humanFeedback }">
+					<label
+						class="option-chip"
+						:class="{ active: store.requestOptions.humanFeedback }"
+					>
 						<input
 							v-model="store.requestOptions.humanFeedback"
 							type="checkbox"
@@ -101,7 +103,10 @@
 						<v-icon size="11">mdi-account-check-outline</v-icon>
 						人工反馈
 					</label>
-					<label class="option-chip" :class="{ active: store.requestOptions.nl2sqlOnly }">
+					<label
+						class="option-chip"
+						:class="{ active: store.requestOptions.nl2sqlOnly }"
+					>
 						<input
 							v-model="store.requestOptions.nl2sqlOnly"
 							type="checkbox"
@@ -112,7 +117,10 @@
 						<v-icon size="11">mdi-database-search-outline</v-icon>
 						仅NL2SQL
 					</label>
-					<label class="option-chip" :class="{ active: store.requestOptions.showSqlResults }">
+					<label
+						class="option-chip"
+						:class="{ active: store.requestOptions.showSqlResults }"
+					>
 						<input
 							v-model="store.requestOptions.showSqlResults"
 							type="checkbox"
@@ -146,7 +154,9 @@
 		<Transition name="slide-up">
 			<div v-if="store.showHumanFeedback" class="human-feedback-panel">
 				<div class="feedback-header">
-					<v-icon color="warning" size="16" class="mr-1">mdi-account-question-outline</v-icon>
+					<v-icon color="warning" size="16" class="mr-1"
+						>mdi-account-question-outline</v-icon
+					>
 					<span>请确认执行计划</span>
 				</div>
 				<textarea
@@ -156,10 +166,16 @@
 					placeholder="输入您的反馈意见（留空表示接受计划）"
 				/>
 				<div class="feedback-actions">
-					<v-btn class="feedback-btn feedback-btn--accept" @click="store.submitFeedback(false, store.feedbackContent)">
+					<v-btn
+						class="feedback-btn feedback-btn--accept"
+						@click="store.submitFeedback(false, store.feedbackContent)"
+					>
 						<v-icon size="14" class="mr-1">mdi-check</v-icon>接受计划
 					</v-btn>
-					<v-btn class="feedback-btn feedback-btn--reject" @click="store.submitFeedback(true, store.feedbackContent)">
+					<v-btn
+						class="feedback-btn feedback-btn--reject"
+						@click="store.submitFeedback(true, store.feedbackContent)"
+					>
 						<v-icon size="14" class="mr-1">mdi-close</v-icon>拒绝重规划
 					</v-btn>
 				</div>
@@ -189,12 +205,12 @@ function toggleModelMenu() {
 	if (showModelMenu.value) showDsMenu.value = false;
 }
 
-async function selectDs(ds: typeof store.allDatasources[0]) {
+async function selectDs(ds: (typeof store.allDatasources)[0]) {
 	showDsMenu.value = false;
 	await store.switchDatasource(ds);
 }
 
-async function selectModel(m: typeof store.chatModels[0]) {
+async function selectModel(m: (typeof store.chatModels)[0]) {
 	showModelMenu.value = false;
 	if (m.id !== undefined) await store.switchModel(m.id);
 }
@@ -228,6 +244,32 @@ async function handleSend() {
 	} catch (e) {
 		console.error('发送失败', e);
 	}
+}
+
+function handleKeydown(event: KeyboardEvent) {
+	if (event.key === 'Enter' && event.altKey) {
+		event.preventDefault();
+		const textarea = event.currentTarget as HTMLTextAreaElement;
+		const start = textarea.selectionStart;
+		const end = textarea.selectionEnd;
+		inputText.value = `${inputText.value.slice(0, start)}\n${inputText.value.slice(end)}`;
+		nextTick(() => {
+			textarea.selectionStart = start + 1;
+			textarea.selectionEnd = start + 1;
+			autoResize();
+		});
+		return;
+	}
+	if (
+		event.key !== 'Enter' ||
+		event.altKey ||
+		event.shiftKey ||
+		event.ctrlKey ||
+		event.metaKey
+	)
+		return;
+	event.preventDefault();
+	void handleSend();
 }
 
 async function handleStop() {
@@ -283,7 +325,9 @@ onUnmounted(() => document.removeEventListener('click', closeMenus));
 	cursor: pointer;
 	user-select: none;
 	white-space: nowrap;
-	transition: border-color 0.1s, background 0.1s;
+	transition:
+		border-color 0.1s,
+		background 0.1s;
 }
 .status-chip:hover:not(.disabled) {
 	border-color: #94a3b8;
@@ -309,7 +353,7 @@ onUnmounted(() => document.removeEventListener('click', closeMenus));
 	background: white;
 	border: 1px solid #e2e8f0;
 	border-radius: 10px;
-	box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 	min-width: 200px;
 	max-width: 300px;
 	max-height: 280px;
@@ -417,7 +461,9 @@ onUnmounted(() => document.removeEventListener('click', closeMenus));
 	font-size: 12px;
 	color: #64748b;
 	cursor: pointer;
-	transition: border-color 0.1s, background 0.1s;
+	transition:
+		border-color 0.1s,
+		background 0.1s;
 	user-select: none;
 }
 .option-chip:hover {
@@ -449,7 +495,9 @@ onUnmounted(() => document.removeEventListener('click', closeMenus));
 	font-size: 14px;
 	font-weight: 600;
 	cursor: pointer;
-	transition: background 0.15s, opacity 0.15s;
+	transition:
+		background 0.15s,
+		opacity 0.15s;
 	white-space: nowrap;
 }
 .send-btn:hover:not(:disabled) {
@@ -540,10 +588,23 @@ onUnmounted(() => document.removeEventListener('click', closeMenus));
 }
 
 /* ── Transitions ─────────────────────────────────────────────────────────────── */
-.fade-enter-active, .fade-leave-active { transition: opacity 0.15s; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
-.slide-up-enter-active, .slide-up-leave-active { transition: all 0.2s ease; }
-.slide-up-enter-from, .slide-up-leave-to { transform: translateY(10px); opacity: 0; }
+.fade-enter-active,
+.fade-leave-active {
+	transition: opacity 0.15s;
+}
+.fade-enter-from,
+.fade-leave-to {
+	opacity: 0;
+}
+.slide-up-enter-active,
+.slide-up-leave-active {
+	transition: all 0.2s ease;
+}
+.slide-up-enter-from,
+.slide-up-leave-to {
+	transform: translateY(10px);
+	opacity: 0;
+}
 
 @media (max-width: 768px) {
 	.input-area {

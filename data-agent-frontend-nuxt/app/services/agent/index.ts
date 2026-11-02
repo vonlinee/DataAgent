@@ -35,13 +35,15 @@ export interface Agent {
 	avatar?: string;
 	/** Agent implementation type (workflow or agentic) */
 	agentType?: AgentType;
+	/** Agentic maximum ReAct loop count */
+	maxLoopCount?: number;
 	/** 状态 (draft, published, offline) */
 	status?: string;
 	/** API Key */
 	apiKey?: string | null;
 	/** 是否启用 API Key */
 	apiKeyEnabled?: number | boolean;
-	/** 提示词 (Prompt) */
+	/** Agentic 系统提示词 */
 	prompt?: string;
 	/** 分类 */
 	category?: string;
@@ -143,6 +145,7 @@ class AgentService {
 				description: agent.description,
 				avatar: agent.avatar,
 				agentType: agent.agentType,
+				maxLoopCount: agent.maxLoopCount,
 				status: agent.status,
 				prompt: agent.prompt,
 				category: agent.category,

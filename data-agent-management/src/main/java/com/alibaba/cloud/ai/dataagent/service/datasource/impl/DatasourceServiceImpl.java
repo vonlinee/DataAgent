@@ -49,6 +49,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.sql.DataSource;
+
 // todo: 检查Mapper的返回值，判断是否执行成功（或者对Mapper进行AOP）
 @Slf4j
 @Service
@@ -85,6 +87,15 @@ public class DatasourceServiceImpl implements DatasourceService {
 	@Override
 	public Datasource getDatasourceById(Integer id) {
 		return datasourceMapper.selectById(id);
+	}
+
+	@Override
+	public javax.sql.DataSource getJdbcDatasource(Integer id) {
+		Datasource datasource = getDatasourceById(id);
+		if (datasource == null) {
+			return null;
+		}
+		return getRealDataSource(datasource);
 	}
 
 	@Override
@@ -284,27 +295,39 @@ public class DatasourceServiceImpl implements DatasourceService {
 		return plain + ", " + delimited;
 	}
 
-	/**
-	 * Actual connection test method
-	 */
-	private boolean realConnectionTest(Datasource datasource) {
-		// Convert Datasource to DbConfig
-		DbConfigBO config = new DbConfigBO();
+	private String normalizeTestUrl(Datasource datasource) {
 		DatasourceTypeHandler handler = datasourceTypeHandlerRegistry.getRequired(datasource.getType());
 		String originalUrl = handler.resolveConnectionUrl(datasource);
 
 		if (StringUtils.isNotBlank(originalUrl)) {
 			originalUrl = handler.normalizeTestUrl(datasource, originalUrl);
 		}
-		config.setUrl(originalUrl);
+		return originalUrl;
+	}
+
+	// Convert Datasource to DbConfig
+	private DbConfigBO buildDbConfig(Datasource datasource) {
+		DbConfigBO config = new DbConfigBO();
+		config.setUrl(normalizeTestUrl(datasource));
 		config.setUsername(datasource.getUsername());
 		config.setPassword(datasource.getPassword());
+		return config;
+	}
 
+	/**
+	 * Actual connection test method
+	 */
+	private boolean realConnectionTest(Datasource datasource) {
+		DbConfigBO config = buildDbConfig(datasource);
 		DBConnectionPool pool = poolFactory.getPoolByDbType(datasource.getType());
-
 		ErrorCodeEnum result = pool.ping(config);
 		return result == ErrorCodeEnum.SUCCESS;
+	}
 
+	private javax.sql.DataSource getRealDataSource(Datasource datasource) {
+		DbConfigBO config = buildDbConfig(datasource);
+		DBConnectionPool pool = poolFactory.getPoolByDbType(datasource.getType());
+		return pool.getDataSource(config);
 	}
 
 	@Override

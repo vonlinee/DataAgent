@@ -15,6 +15,7 @@
  */
 package com.alibaba.cloud.ai.dataagent.vo;
 
+import com.alibaba.cloud.ai.dataagent.agent.AgentResponse;
 import com.alibaba.cloud.ai.dataagent.enums.TextType;
 import com.alibaba.cloud.ai.dataagent.enums.GraphEventType;
 import lombok.AllArgsConstructor;
@@ -26,7 +27,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class GraphNodeResponse {
+public class GraphNodeResponse implements AgentResponse {
 
 	private String agentId;
 

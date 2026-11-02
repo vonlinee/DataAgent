@@ -42,6 +42,10 @@ import java.util.List;
 @AllArgsConstructor
 public class AgentServiceImpl implements AgentService {
 
+	private static final int DEFAULT_MAX_LOOP_COUNT = 10;
+
+	private static final int MAX_LOOP_COUNT = 100;
+
 	private final AgentMapper agentMapper;
 
 	private final AgentVectorStoreService agentVectorStoreService;
@@ -78,6 +82,7 @@ public class AgentServiceImpl implements AgentService {
 	public Agent save(Agent agent) {
 		LocalDateTime now = LocalDateTime.now();
 		validateAgentType(agent.getAgentType());
+		validateMaxLoopCount(agent.getMaxLoopCount());
 
 		if (agent.getId() == null) {
 			// Add
@@ -88,6 +93,9 @@ public class AgentServiceImpl implements AgentService {
 			agent.setUpdateTime(now);
 			if (agent.getApiKeyEnabled() == null) {
 				agent.setApiKeyEnabled(0);
+			}
+			if (agent.getMaxLoopCount() == null) {
+				agent.setMaxLoopCount(DEFAULT_MAX_LOOP_COUNT);
 			}
 
 			agentMapper.insert(agent);
@@ -189,6 +197,12 @@ public class AgentServiceImpl implements AgentService {
 	private void validateAgentType(String agentType) {
 		if (agentType != null && !agentType.isBlank() && !AgentType.isSupported(agentType)) {
 			throw new IllegalArgumentException("Unsupported agent type: " + agentType);
+		}
+	}
+
+	private void validateMaxLoopCount(Integer maxLoopCount) {
+		if (maxLoopCount != null && (maxLoopCount < 1 || maxLoopCount > MAX_LOOP_COUNT)) {
+			throw new IllegalArgumentException("maxLoopCount must be between 1 and " + MAX_LOOP_COUNT);
 		}
 	}
 

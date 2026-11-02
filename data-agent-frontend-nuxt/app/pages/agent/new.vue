@@ -137,16 +137,31 @@
 							hide-details="auto"
 						/>
 					</v-col>
-					<v-col cols="12">
+					<v-col v-if="agentForm.agentType === 'agentic'" cols="12">
 						<p class="text-body-2 font-weight-medium text-grey-darken-2 mb-2">
-							智能体 Prompt
+							系统提示词
 						</p>
 						<v-textarea
 							v-model="agentForm.prompt"
-							placeholder="请输入智能体 Prompt"
+							placeholder="请输入 Agentic 智能体的系统提示词"
 							variant="outlined"
 							density="compact"
 							rows="4"
+							hide-details="auto"
+						/>
+					</v-col>
+					<v-col v-if="agentForm.agentType === 'agentic'" cols="12" md="6">
+						<p class="text-body-2 font-weight-medium text-grey-darken-2 mb-2">
+							最大 Loop 次数
+						</p>
+						<v-text-field
+							v-model.number="agentForm.maxLoopCount"
+							type="number"
+							min="1"
+							max="100"
+							variant="outlined"
+							density="compact"
+							:rules="[(v) => Number.isInteger(v) && v >= 1 && v <= 100 || '请输入 1-100 的整数']"
 							hide-details="auto"
 						/>
 					</v-col>
@@ -213,6 +228,7 @@ const agentForm = reactive({
 	category: '',
 	tags: '',
 	prompt: '',
+	maxLoopCount: 10,
 	status: 'draft',
 	agentType: 'workflow',
 	humanReviewEnabled: false,
@@ -300,6 +316,7 @@ async function createAgent() {
 			category: agentForm.category.trim(),
 			tags: agentForm.tags.trim(),
 			prompt: agentForm.prompt.trim(),
+			maxLoopCount: agentForm.maxLoopCount,
 			status: agentForm.status,
 			agentType: agentForm.agentType,
 			humanReviewEnabled: agentForm.humanReviewEnabled ? 1 : 0,

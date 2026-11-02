@@ -18,7 +18,17 @@
         <url>https://github.com/alibaba/spring-ai-alibaba</url>
     </scm>
 
+    <properties>
+        <agentscope.version>2.0.3</agentscope.version>
+        <jsqlparser.version>5.1</jsqlparser.version>
+    </properties>
+
     <dependencies>
+        <dependency>
+            <groupId>com.github.jsqlparser</groupId>
+            <artifactId>jsqlparser</artifactId>
+            <version>${jsqlparser.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
@@ -308,6 +318,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-extensions-model-dashscope</artifactId>
+            <version>${agentscope.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

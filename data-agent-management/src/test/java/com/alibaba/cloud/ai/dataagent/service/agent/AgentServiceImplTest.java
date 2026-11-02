@@ -97,6 +97,7 @@ class AgentServiceImplTest {
 		assertNotNull(agent.getUpdateTime());
 		assertEquals("workflow", agent.getAgentType());
 		assertEquals(0, agent.getApiKeyEnabled());
+		assertEquals(10, agent.getMaxLoopCount());
 		verify(agentMapper).insert(agent);
 	}
 
@@ -113,6 +114,14 @@ class AgentServiceImplTest {
 	@Test
 	void save_rejectsUnsupportedImplementationType() {
 		Agent agent = Agent.builder().agentType("unknown").build();
+
+		assertThrows(IllegalArgumentException.class, () -> agentService.save(agent));
+		verify(agentMapper, never()).insert(agent);
+	}
+
+	@Test
+	void save_rejectsInvalidMaxLoopCount() {
+		Agent agent = Agent.builder().agentType("agentic").maxLoopCount(101).build();
 
 		assertThrows(IllegalArgumentException.class, () -> agentService.save(agent));
 		verify(agentMapper, never()).insert(agent);

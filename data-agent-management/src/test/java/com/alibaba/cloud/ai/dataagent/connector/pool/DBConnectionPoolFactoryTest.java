@@ -21,6 +21,8 @@ import java.sql.Connection;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
+import javax.sql.DataSource;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -69,6 +71,11 @@ class DBConnectionPoolFactoryTest {
 		@Override
 		public String getConnectionPoolType() {
 			return type;
+		}
+
+		@Override
+		public DataSource getDataSource(DbConfigBO config) {
+			return null;
 		}
 
 		@Override

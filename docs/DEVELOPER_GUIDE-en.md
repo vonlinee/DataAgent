@@ -107,6 +107,10 @@ public class AgentVectorStoreService {
 }
 ```
 
+### 4. Agentic Agent Configuration
+
+When creating or editing an Agentic agent, configure its system prompt and maximum loop count. The system prompt is appended after the built-in ReAct tool-calling rules. The maximum loop count accepts values from 1 to 100 and defaults to 10. Existing environments must apply `scripts/sql/mysql/20261107/add_agentic_loop_count.sql` or `scripts/sql/h2/20261107/add_agentic_loop_count.sql` in date order.
+
 ## Coding Standards
 
 ### Java Coding Standards

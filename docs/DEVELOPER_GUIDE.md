@@ -107,6 +107,10 @@ public class AgentVectorStoreService {
 }
 ```
 
+### 4. Agentic 智能体配置
+
+创建或编辑 Agentic 智能体时，可以配置系统提示词和最大 Loop 次数。系统提示词会附加在内置 ReAct 工具调用规则之后，最大 Loop 次数取值范围为 1-100，默认值为 10。已有环境需要按日期顺序执行 `scripts/sql/mysql/20261107/add_agentic_loop_count.sql` 或 `scripts/sql/h2/20261107/add_agentic_loop_count.sql`。
+
 ## 🎨 编码规范
 
 ### Java 编码规范

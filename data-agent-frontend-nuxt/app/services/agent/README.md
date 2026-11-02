@@ -35,13 +35,14 @@ export interface Agent {
 	avatar?: string;
 	/** 实现方式 (workflow 或 agentic) */
 	agentType?: 'workflow' | 'agentic';
+	maxLoopCount?: number;
 	/** 状态 (draft, published, offline) */
 	status?: string;
 	/** API Key */
 	apiKey?: string | null;
 	/** 是否启用 API Key */
 	apiKeyEnabled?: number | boolean;
-	/** 提示词 (Prompt) */
+	/** Agentic 系统提示词 */
 	prompt?: string;
 	/** 分类 */
 	category?: string;

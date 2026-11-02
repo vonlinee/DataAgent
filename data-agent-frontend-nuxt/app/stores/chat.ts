@@ -85,6 +85,7 @@ export const useChatStore = defineStore('chat', () => {
 
 	// ── Agent info (set by layout) ──────────────────────────────────────────────
 	const currentAgentId = ref<number | undefined>(undefined);
+	const currentAgentType = ref<'workflow' | 'agentic'>('workflow');
 	const activeChatModel = ref('');
 	const currentAgentName = ref('');
 	const currentAgentAvatar = ref('');
@@ -619,6 +620,7 @@ export const useChatStore = defineStore('chat', () => {
 		streamingReportContent,
 		isReportStreaming,
 		currentAgentId,
+		currentAgentType,
 		chatSidebarCollapsed,
 		activeChatModel,
 		currentAgentName,

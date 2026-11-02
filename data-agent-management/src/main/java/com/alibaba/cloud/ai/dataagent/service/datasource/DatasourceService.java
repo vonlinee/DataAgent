@@ -43,6 +43,8 @@ public interface DatasourceService {
 	 */
 	Datasource getDatasourceById(Integer id);
 
+	javax.sql.DataSource getJdbcDatasource(Integer id);
+
 	/**
 	 * Create data source
 	 */

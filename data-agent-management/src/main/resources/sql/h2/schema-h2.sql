@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS agent (
     name VARCHAR(255) NOT NULL COMMENT '智能体名称',
     description TEXT COMMENT '智能体描述',
     avatar TEXT COMMENT '头像URL',
+    max_loop_count INT NOT NULL DEFAULT 10 COMMENT 'Agentic模式最大循环次数，取值范围1-100',
     status VARCHAR(50) DEFAULT 'draft' COMMENT '状态：draft-待发布，published-已发布，offline-已下线',
     api_key VARCHAR(255) DEFAULT NULL COMMENT '访问 API Key，格式 sk-xxx',
     api_key_enabled TINYINT DEFAULT 0 COMMENT 'API Key 是否启用：0-禁用，1-启用',

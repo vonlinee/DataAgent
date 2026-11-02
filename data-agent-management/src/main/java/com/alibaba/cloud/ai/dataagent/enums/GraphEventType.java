@@ -15,12 +15,14 @@
  */
 package com.alibaba.cloud.ai.dataagent.enums;
 
-public enum GraphEventType {
+import com.alibaba.cloud.ai.dataagent.agent.EventType;
 
-	NODE_OUTPUT,
+public enum GraphEventType implements EventType {
 
-	FINAL_ANSWER,
+    NODE_OUTPUT,
 
-	HUMAN_FEEDBACK_REQUIRED
+    FINAL_ANSWER,
+
+    HUMAN_FEEDBACK_REQUIRED
 
 }

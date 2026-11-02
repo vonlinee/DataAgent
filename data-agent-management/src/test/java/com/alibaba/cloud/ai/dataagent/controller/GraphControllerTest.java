@@ -15,153 +15,148 @@
  */
 package com.alibaba.cloud.ai.dataagent.controller;
 
-import com.alibaba.cloud.ai.dataagent.dto.GraphRequest;
-import com.alibaba.cloud.ai.dataagent.enums.GraphEventType;
-import com.alibaba.cloud.ai.dataagent.enums.TextType;
-import com.alibaba.cloud.ai.dataagent.service.graph.GraphService;
+import com.alibaba.cloud.ai.dataagent.agent.AgentResponse;
+import com.alibaba.cloud.ai.dataagent.agent.AgentStreamEvent;
+import com.alibaba.cloud.ai.dataagent.agent.GraphicWorkflowAgentService;
+import com.alibaba.cloud.ai.dataagent.agent.ReActEventType;
+import com.alibaba.cloud.ai.dataagent.agent.ReActDataAgentService;
+import com.alibaba.cloud.ai.dataagent.dto.AgentRequest;
+import com.alibaba.cloud.ai.dataagent.entity.Agent;
+import com.alibaba.cloud.ai.dataagent.enums.AgentType;
+import com.alibaba.cloud.ai.dataagent.service.agent.AgentService;
 import com.alibaba.cloud.ai.dataagent.vo.GraphNodeResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.http.server.reactive.ServerHttpResponse;
-import org.springframework.http.HttpHeaders;
-import reactor.core.publisher.Sinks;
+import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
-import java.time.Duration;
-
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class GraphControllerTest {
 
-	@Mock
-	private GraphService graphService;
+    @Mock
+    private AgentService agentService;
 
-	@Mock
-	private ServerHttpResponse serverHttpResponse;
+    @Mock
+    private ReActDataAgentService reActDataAgentService;
 
-	@Mock
-	private HttpHeaders httpHeaders;
+    @Mock
+    private GraphicWorkflowAgentService graphicWorkflowAgentService;
 
-	private GraphController graphController;
+    @Mock
+    private ServerHttpResponse serverHttpResponse;
 
-	@BeforeEach
-	void setUp() {
-		graphController = new GraphController(graphService);
-	}
+    @Mock
+    private HttpHeaders httpHeaders;
 
-	private void stubResponseHeaders() {
-		when(serverHttpResponse.getHeaders()).thenReturn(httpHeaders);
-	}
+    private GraphController graphController;
 
-	@Test
-	void streamSearch_validRequest_invokesGraphServiceAndReturnsFlux() {
-		stubResponseHeaders();
-		doAnswer(invocation -> {
-			Sinks.Many<ServerSentEvent<GraphNodeResponse>> sink = invocation.getArgument(0);
-			sink.tryEmitComplete();
-			return null;
-		}).when(graphService).graphStreamProcess(any(Sinks.Many.class), any(GraphRequest.class));
+    @BeforeEach
+    void setUp() {
+        graphController = new GraphController(agentService, reActDataAgentService, graphicWorkflowAgentService);
+    }
 
-		StepVerifier
-			.create(graphController.streamSearch("agent-1", "conversation-1", "thread-1", "show me sales data", false,
-					null, false, false, serverHttpResponse))
-			.verifyComplete();
+    private void stubResponseHeaders() {
+        when(serverHttpResponse.getHeaders()).thenReturn(httpHeaders);
+    }
 
-		ArgumentCaptor<GraphRequest> requestCaptor = ArgumentCaptor.forClass(GraphRequest.class);
-		verify(graphService).graphStreamProcess(any(Sinks.Many.class), requestCaptor.capture());
+    @Test
+    void streamSearch_routesAgenticAgentToReActService() {
+        stubResponseHeaders();
+        AgentRequest request = request("1");
+        AgentStreamEvent payload = new AgentStreamEvent("1", "run-1", ReActEventType.THINKING, "step-1", 1,
+                "ToolCall", "TEXT", "calling tool", false, false);
+        ServerSentEvent<AgentResponse> event = event(payload);
+        when(agentService.findById(1L)).thenReturn(agent(AgentType.AGENTIC));
+        when(reActDataAgentService.streamSearch(request)).thenReturn(Flux.just(event));
 
-		GraphRequest captured = requestCaptor.getValue();
-		assertEquals("agent-1", captured.getAgentId());
-		assertEquals("conversation-1", captured.getConversationId());
-		assertEquals("thread-1", captured.getThreadId());
-		assertEquals("show me sales data", captured.getQuery());
-		assertFalse(captured.isHumanFeedback());
-		verify(httpHeaders).add("Cache-Control", "no-cache");
-		verify(httpHeaders).add("Connection", "keep-alive");
-		verify(httpHeaders).add("Access-Control-Allow-Origin", "*");
-	}
+        StepVerifier.create(graphController.streamSearch(request, serverHttpResponse))
+            .expectNext(event)
+            .verifyComplete();
 
-	@Test
-	void streamSearch_humanFeedback_passesHumanFeedbackParams() {
-		stubResponseHeaders();
+        verify(reActDataAgentService).streamSearch(request);
+        verify(graphicWorkflowAgentService, never()).streamSearch(any(AgentRequest.class));
+        verify(httpHeaders).add("Cache-Control", "no-cache");
+        verify(httpHeaders).add("Connection", "keep-alive");
+        verify(httpHeaders).add("Access-Control-Allow-Origin", "*");
+    }
 
-		graphController.streamSearch("agent-1", "conversation-2", "thread-2", "approve this plan", true, "looks good",
-				false, false, serverHttpResponse);
+    @Test
+    void streamSearch_routesWorkflowAgentToWorkflowService() {
+        stubResponseHeaders();
+        AgentRequest request = request("2");
+        GraphNodeResponse payload = GraphNodeResponse.builder()
+            .agentId("2")
+            .threadId("run-2")
+            .text("workflow output")
+            .build();
+        ServerSentEvent<AgentResponse> event = event(payload);
+        when(agentService.findById(2L)).thenReturn(agent(AgentType.WORKFLOW));
+        when(graphicWorkflowAgentService.streamSearch(request)).thenReturn(Flux.just(event));
 
-		ArgumentCaptor<GraphRequest> requestCaptor = ArgumentCaptor.forClass(GraphRequest.class);
-		verify(graphService).graphStreamProcess(any(Sinks.Many.class), requestCaptor.capture());
+        StepVerifier.create(graphController.streamSearch(request, serverHttpResponse))
+            .expectNext(event)
+            .verifyComplete();
 
-		GraphRequest captured = requestCaptor.getValue();
-		assertTrue(captured.isHumanFeedback());
-		assertEquals("looks good", captured.getHumanFeedbackContent());
-		assertFalse(captured.isRejectedPlan());
-	}
+        verify(graphicWorkflowAgentService).streamSearch(request);
+        verify(reActDataAgentService, never()).streamSearch(any(AgentRequest.class));
+    }
 
-	@Test
-	void streamSearch_nl2sqlOnly_setsNl2sqlOnlyFlag() {
-		stubResponseHeaders();
+    @Test
+    void streamSearch_missingAgentReturnsNotFound() {
+        stubResponseHeaders();
+        AgentRequest request = request("404");
+        when(agentService.findById(404L)).thenReturn(null);
 
-		graphController.streamSearch("agent-1", "conversation-3", null, "SELECT query", false, null, false, true,
-				serverHttpResponse);
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> graphController.streamSearch(request, serverHttpResponse));
+    }
 
-		ArgumentCaptor<GraphRequest> requestCaptor = ArgumentCaptor.forClass(GraphRequest.class);
-		verify(graphService).graphStreamProcess(any(Sinks.Many.class), requestCaptor.capture());
+    @Test
+    void stopStream_routesToAgentImplementation() {
+        when(agentService.findById(1L)).thenReturn(agent(AgentType.AGENTIC));
 
-		GraphRequest captured = requestCaptor.getValue();
-		assertTrue(captured.isNl2sqlOnly());
-		assertNull(captured.getThreadId());
-	}
+        graphController.stopStream("1", "conversation-1", "run-1");
 
-	@Test
-	void streamSearch_protocolEventWithoutText_isNotFilteredOut() {
-		stubResponseHeaders();
-		doAnswer(invocation -> {
-			Sinks.Many<ServerSentEvent<GraphNodeResponse>> sink = invocation.getArgument(0);
-			sink.tryEmitNext(ServerSentEvent
-				.builder(GraphNodeResponse.builder()
-					.agentId("agent-1")
-					.threadId("run-1")
-					.eventType(GraphEventType.HUMAN_FEEDBACK_REQUIRED)
-					.textType(TextType.TEXT)
-					.build())
-				.build());
-			sink.tryEmitComplete();
-			return null;
-		}).when(graphService).graphStreamProcess(any(Sinks.Many.class), any(GraphRequest.class));
+        verify(reActDataAgentService).stopStream("conversation-1", "run-1");
+        verify(graphicWorkflowAgentService, never()).stopStream(any(String.class), any(String.class));
+    }
 
-		GraphNodeResponse response = graphController
-			.streamSearch("agent-1", "conversation-1", null, "review the plan", true, null, false, false,
-					serverHttpResponse)
-			.map(ServerSentEvent::data)
-			.blockFirst(Duration.ofSeconds(1));
+    @Test
+    void stopStream_routesWorkflowAgentToWorkflowService() {
+        when(agentService.findById(2L)).thenReturn(agent(AgentType.WORKFLOW));
 
-		assertNotNull(response);
-		assertEquals(GraphEventType.HUMAN_FEEDBACK_REQUIRED, response.getEventType());
-		assertNull(response.getText());
-	}
+        graphController.stopStream("2", "conversation-2", "run-2");
 
-	@Test
-	void stopStream_withRunId_stopsExactGraphRun() {
-		graphController.stopStream("conversation-4", "run-4");
+        verify(graphicWorkflowAgentService).stopStream("conversation-2", "run-2");
+        verify(reActDataAgentService, never()).stopStream(any(String.class), any(String.class));
+    }
 
-		verify(graphService).stopStreamProcessing("run-4");
-		verify(graphService, never()).stopStreamProcessingByConversationId(anyString());
-	}
+    private AgentRequest request(String agentId) {
+        return AgentRequest.builder()
+            .agentId(agentId)
+            .conversationId("conversation-" + agentId)
+            .query("test query")
+            .build();
+    }
 
-	@Test
-	void stopStream_withoutRunId_stopsConversationRun() {
-		graphController.stopStream("conversation-5", null);
+    private Agent agent(AgentType type) {
+        return Agent.builder().id(1L).agentType(type.getValue()).build();
+    }
 
-		verify(graphService).stopStreamProcessingByConversationId("conversation-5");
-		verify(graphService, never()).stopStreamProcessing(anyString());
-	}
+    private ServerSentEvent<AgentResponse> event(AgentResponse payload) {
+        return ServerSentEvent.<AgentResponse>builder().data(payload).build();
+    }
 
 }

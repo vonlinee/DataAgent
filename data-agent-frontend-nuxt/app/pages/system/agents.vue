@@ -307,6 +307,32 @@
 							/>
 						</div>
 
+						<div v-if="isAgenticType(editForm.agentType)" class="mb-4">
+							<p class="text-body-2 font-weight-medium text-grey-darken-2 mb-2">系统提示词</p>
+							<v-textarea
+								v-model="editForm.prompt"
+								placeholder="请输入 Agentic 智能体的系统提示词"
+								variant="outlined"
+								density="compact"
+								rows="4"
+								hide-details
+							/>
+						</div>
+
+						<div v-if="isAgenticType(editForm.agentType)" class="mb-4">
+							<p class="text-body-2 font-weight-medium text-grey-darken-2 mb-2">最大 Loop 次数</p>
+							<v-text-field
+								v-model.number="editForm.maxLoopCount"
+								type="number"
+								min="1"
+								max="100"
+								variant="outlined"
+								density="compact"
+								:rules="[(v) => Number.isInteger(v) && v >= 1 && v <= 100 || '请输入 1-100 的整数']"
+								hide-details="auto"
+							/>
+						</div>
+
 						<div class="mb-2">
 							<p class="text-body-2 font-weight-medium text-grey-darken-2 mb-2">实现方式</p>
 							<v-select
@@ -428,6 +454,8 @@ const {
 		tags: '',
 		status: 'draft',
 		agentType: 'workflow',
+		prompt: '',
+		maxLoopCount: 10,
 	}),
 });
 
@@ -485,8 +513,17 @@ const filteredAgents = computed(() => {
 
 function goToCreateAgent() { router.push('/agent/new'); }
 
-function handleEdit(agent: Agent) {
+async function handleEdit(agent: Agent) {
 	editingId.value = agent.id;
+	if (agent.id) {
+		try {
+			const detail = await agentService.get(agent.id);
+			openEditDialog(detail ?? agent);
+			return;
+		} catch {
+			// Fall back to the list item when the detail request fails.
+		}
+	}
 	openEditDialog(agent);
 }
 
@@ -505,19 +542,23 @@ async function saveEdit() {
 	}
 	saveLoading.value = true;
 	try {
+		const updatedForm = { ...editForm.value };
 		const result = await agentService.update(editingId.value, {
 			name: editForm.value.name?.trim(),
 			description: editForm.value.description?.trim(),
 			category: editForm.value.category?.trim(),
 			tags: editForm.value.tags?.trim(),
 			agentType: editForm.value.agentType || 'workflow',
+			prompt: editForm.value.prompt?.trim(),
+			maxLoopCount: editForm.value.maxLoopCount,
 			status: editForm.value.status,
 		});
 		if (result) {
 			$tip('智能体更新成功');
+			const savedId = editingId.value;
 			closeEditDialog();
-			const index = agents.value.findIndex(a => a.id === editingId.value);
-			if (index !== -1) { agents.value[index] = { ...agents.value[index], ...editForm.value }; }
+			const index = agents.value.findIndex(a => a.id === savedId);
+			if (index !== -1) { agents.value[index] = { ...agents.value[index], ...updatedForm }; }
 		} else {
 			$tip('智能体更新失败', { icon: 'mdi-alert-circle', color: 'error' });
 		}
@@ -565,10 +606,12 @@ const getInitials = (name?: string) => {
 };
 
 const getAgentTypeText = (agentType?: string) =>
-	agentType === 'agentic' ? 'Agentic' : 'Workflow';
+	agentType?.toLowerCase() === 'agentic' ? 'Agentic' : 'Workflow';
 
 const getAgentTypeColor = (agentType?: string) =>
-	agentType === 'agentic' ? 'deep-purple' : 'blue';
+	agentType?.toLowerCase() === 'agentic' ? 'deep-purple' : 'blue';
+
+const isAgenticType = (agentType?: string) => agentType?.toLowerCase() === 'agentic';
 
 const parseTags = (tags?: string) => {
 	if (!tags || tags.trim() === '') return [];

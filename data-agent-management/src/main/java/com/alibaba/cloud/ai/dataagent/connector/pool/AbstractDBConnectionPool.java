@@ -155,6 +155,57 @@ public abstract class AbstractDBConnectionPool implements DBConnectionPool {
 		return null;
 	}
 
+	@Override
+	public DataSource getDataSource(DbConfigBO config) {
+		String jdbcUrl = config.getUrl();
+		int maxAttempts = retryPolicy.maxAttempts();
+		for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+			try {
+				// Generate cache key based on connection parameters
+				DataSourceCacheKey cacheKey = generateCacheKey(jdbcUrl, config.getUsername(), config.getPassword());
+
+				// Use computeIfAbsent to ensure thread safety and avoid duplicate
+				// DataSource
+				// creation
+				DataSource dataSource = DATA_SOURCE_CACHE.computeIfAbsent(cacheKey, key -> {
+					try {
+						log.debug("Creating new DataSource for URL: {}, username: {}", jdbcUrl, config.getUsername());
+						return createdDataSource(jdbcUrl, config.getUsername(), config.getPassword());
+					} catch (Exception e) {
+						log.error("Failed to create DataSource for URL: {}, username: {}", jdbcUrl,
+								config.getUsername(), e);
+						throw new RuntimeException("Failed to create DataSource", e);
+					}
+				});
+
+				// 记录连接池状态
+				if (dataSource instanceof DruidDataSource druidDataSource) {
+					log.debug("Connection pool status - Active: {}, Idle: {}, Total: {}, WaitCount: {}",
+							druidDataSource.getActiveCount(), druidDataSource.getPoolingCount(),
+							druidDataSource.getActiveCount() + druidDataSource.getPoolingCount(),
+							druidDataSource.getWaitThreadCount());
+				}
+				return dataSource;
+			} catch (Exception e) {
+				log.warn("Attempt {} to get database connection failed: {}", attempt, e.getMessage());
+				if (attempt == maxAttempts) {
+					log.error("Failed to get database connection after {} attempts, URL: {}", maxAttempts, jdbcUrl, e);
+					throw new RuntimeException("Failed to get database connection after " + maxAttempts + " attempts",
+							e);
+				}
+				// Wait before retry with incremental backoff
+				try {
+					retryPolicy.pauseAfterFailure(attempt);
+				} catch (InterruptedException interruptedException) {
+					Thread.currentThread().interrupt();
+					throw new IllegalStateException("Interrupted while retrying database connection",
+							interruptedException);
+				}
+			}
+		}
+		return null;
+	}
+
 	/**
 	 * Generate cache key based on connection parameters.
 	 * @param url the database URL

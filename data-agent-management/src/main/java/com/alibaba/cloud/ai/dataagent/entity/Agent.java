@@ -45,6 +45,9 @@ public class Agent {
 	@Builder.Default
 	private String agentType = AgentType.WORKFLOW.getValue(); // Agent implementation type: workflow or agentic
 
+	@Builder.Default
+	private Integer maxLoopCount = 10; // Maximum ReAct loop count for Agentic agents
+
 	// todo: 改为枚举
 	private String status; // Status: draft-pending publication, published-published,
 							// offline-offline
