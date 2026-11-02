@@ -38,6 +38,38 @@ fix(backend): prevent duplicate agent datasource binding
 docs(db): document incremental schema script convention
 ```
 
+## Java 格式化与 Checkstyle
+
+在仓库根目录执行。Windows 用 `.\mvnw.cmd`，Unix 用 `./mvnw`。
+
+```powershell
+# 格式化
+.\mvnw.cmd spring-javaformat:apply
+# 检查格式
+.\mvnw.cmd spring-javaformat:validate
+# 清理导入、补许可证头
+.\mvnw.cmd spotless:apply
+# Checkstyle
+.\mvnw.cmd checkstyle:check
+# 仅检查后端模块
+.\mvnw.cmd -pl data-agent-management checkstyle:check
+# 生成 target/checkstyle-report.xml
+.\mvnw.cmd -Dcheckstyle.output.file=checkstyle-report.xml checkstyle:check
+```
+
+Checkstyle 配置为 `CI/src/checkstyle/checkstyle.xml`，绑定 Maven `validate` 阶段，覆盖测试源码。`validate`、`test`、`package`、`verify` 会自动执行。
+
+需要 `make` 和 `mvnd` 时可用：
+
+```bash
+make format-fix # 格式化
+make format-check # 检查格式
+make spotless-apply # 清理导入、补许可证头
+make checkstyle-check # Checkstyle
+```
+
+提交前按上述顺序执行。
+
 ## 数据库脚本更新规则
 
 更新数据库 Schema 时，必须为已有环境提供增量脚本，并同时维护 MySQL 和 H2 两种数据库脚本：
