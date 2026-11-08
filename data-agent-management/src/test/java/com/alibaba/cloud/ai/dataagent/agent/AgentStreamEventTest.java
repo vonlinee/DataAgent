@@ -35,6 +35,7 @@ class AgentStreamEventTest {
         JsonNode payload = objectMapper.readTree(objectMapper.writeValueAsString(event));
 
         assertEquals("FINAL_ANSWER", payload.get("eventType").asText());
+        assertEquals(true, payload.get("timestamp").asLong() > 0);
     }
 
     @Test

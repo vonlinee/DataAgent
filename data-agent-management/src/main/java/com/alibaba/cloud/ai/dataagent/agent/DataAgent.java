@@ -18,6 +18,7 @@ package com.alibaba.cloud.ai.dataagent.agent;
 import com.alibaba.cloud.ai.dataagent.dto.AgentRequest;
 import com.alibaba.cloud.ai.dataagent.dto.ModelConfigDTO;
 import com.alibaba.cloud.ai.dataagent.entity.Agent;
+import com.alibaba.cloud.ai.dataagent.enums.TextType;
 import com.alibaba.cloud.ai.dataagent.tools.*;
 import io.agentscope.core.ReActAgent;
 import io.agentscope.core.agent.RuntimeContext;
@@ -65,6 +66,9 @@ class DataAgent {
 
     private static final int DEFAULT_MAX_LOOP_COUNT = 10;
 
+    /**
+     * 轮次消息
+     */
     private final Map<String, RunState> runs = new ConcurrentHashMap<>();
 
     private final ModelConfigDTO config;
@@ -136,8 +140,8 @@ class DataAgent {
                 .maxBackoff(Duration.ofSeconds(30))
                 .backoffMultiplier(2.0)
                 .retryOn(error -> error.getMessage() != null
-                                  && (error.getMessage().contains("rate limit")
-                                      || error.getMessage().contains("timeout")))
+                        && (error.getMessage().contains("rate limit")
+                        || error.getMessage().contains("timeout")))
                 .build();
         ExecutionConfig toolExecConfig = ExecutionConfig.builder()
                 .timeout(Duration.ofSeconds(30))
@@ -235,6 +239,14 @@ class DataAgent {
         state.setContext(context);
         state.agent = currentAgent;
 
+        // 上下文消息
+        if (!runs.containsKey(runId)) {
+            // 首轮添加上下文消息
+            emitNode(state, ReActEventType.CONTEXT, "Context", "context",
+                    buildContextMessage(agent, agentRequest));
+        }
+        emitNode(state, ReActEventType.USER_MESSAGE, "User", "user-message", query);
+
         state.subscription = currentAgent.streamEvents(userMessage, context)
                 .subscribe(event -> handleEvent(state, event),
                         error -> finishWithError(state, error),
@@ -291,26 +303,30 @@ class DataAgent {
                     thinking.getDelta());
         } else if (type == AgentEventType.TOOL_CALL_START) {
             ToolCallStartEvent tool = (ToolCallStartEvent) event;
-            String stepId = toolStepId(tool.getToolCallId(), "tool-call");
+            String stepId = toolStepId(state, tool.getToolCallId(), tool.getReplyId(), "tool-call");
             emitNode(state, ReActEventType.TOOL_CALL, "ToolCall", stepId,
                     "正在调用工具：" + valueOrDefault(tool.getToolCallName(), "未知工具"));
         } else if (type == AgentEventType.TOOL_CALL_DELTA) {
             ToolCallDeltaEvent tool = (ToolCallDeltaEvent) event;
             emitNode(state, ReActEventType.TOOL_CALL, "ToolCall",
-                    toolStepId(tool.getToolCallId(), "tool-call"), tool.getDelta());
+                    toolStepId(state, tool.getToolCallId(), tool.getReplyId(), "tool-call"), tool.getDelta(),
+                    TextType.JSON.name());
         } else if (type == AgentEventType.TOOL_RESULT_START) {
             ToolResultStartEvent tool = (ToolResultStartEvent) event;
             emitNode(state, ReActEventType.TOOL_RESULT, "ToolResult",
-                    toolStepId(tool.getToolCallId(), "tool-result"),
+                    toolStepId(state, tool.getToolCallId(), tool.getReplyId(), "tool-result"),
                     "工具返回结果");
         } else if (type == AgentEventType.TOOL_RESULT_TEXT_DELTA) {
             ToolResultTextDeltaEvent tool = (ToolResultTextDeltaEvent) event;
             emitNode(state, ReActEventType.TOOL_RESULT, "ToolResult",
-                    toolStepId(tool.getToolCallId(), "tool-result"), tool.getDelta());
+                    toolStepId(state, tool.getToolCallId(), tool.getReplyId(), "tool-result"), tool.getDelta(),
+                    inferTextType(tool.getDelta()));
         } else if (type == AgentEventType.TEXT_BLOCK_DELTA) {
             TextBlockDeltaEvent text = (TextBlockDeltaEvent) event;
             if (text.getDelta() != null) {
                 state.answer.append(text.getDelta());
+                emitNode(state, ReActEventType.ASSISTANT, "Assistant",
+                        valueOrDefault(text.getBlockId(), "assistant"), text.getDelta());
             }
         } else if (type == AgentEventType.AGENT_RESULT) {
             AgentResultEvent result = (AgentResultEvent) event;
@@ -325,12 +341,48 @@ class DataAgent {
     }
 
     private void emitNode(RunState state, ReActEventType eventType, String nodeName, String stepId, String text) {
+        emitNode(state, eventType, nodeName, stepId, text, TextType.TEXT.name());
+    }
+
+    private void emitNode(RunState state, ReActEventType eventType, String nodeName, String stepId, String text,
+                          String textType) {
         if (text == null || text.isEmpty()) {
             return;
         }
         AgentStreamEvent payload = new AgentStreamEvent(state.agentId, state.threadId,
-                eventType, stepId, 1, nodeName, "TEXT", text, false, false);
+                eventType, stepId, 1, nodeName, textType, text, false, false);
         state.sink.tryEmitNext(ServerSentEvent.<AgentStreamEvent>builder().data(payload).build());
+    }
+
+    static String inferTextType(String text) {
+        if (text == null || text.isBlank()) {
+            return TextType.TEXT.name();
+        }
+        String value = text.trim();
+        String lowerValue = value.toLowerCase();
+        if (value.startsWith("{") || value.startsWith("[")) {
+            return TextType.JSON.name();
+        }
+        if (lowerValue.matches("(?s)^\\s*```sql\\s+.*```\\s*$")) {
+            return TextType.SQL.name();
+        }
+        if (lowerValue.contains("```sql") || lowerValue.matches("(?s).*\\b(select|with|insert|update|delete)\\b.*")) {
+            return lowerValue.contains("```") ? TextType.MARK_DOWN.name() : TextType.SQL.name();
+        }
+        if (lowerValue.contains("```") || lowerValue.matches("(?s).*^\\s*\\|.+\\|\\s*$.*")
+                || lowerValue.matches("(?s).*^\\s*#{1,6}\\s+.+$.*")) {
+            return TextType.MARK_DOWN.name();
+        }
+        return TextType.TEXT.name();
+    }
+
+    private String buildContextMessage(Agent agent, AgentRequest request) {
+        String datasource = request.getDatasourceId() == null ? "未指定" : request.getDatasourceId().toString();
+        return "系统提示词:\n" + resolveSystemPrompt(agent)
+                + "\n\n运行上下文:\n"
+                + "agentId=" + request.getAgentId() + "\n"
+                + "conversationId=" + valueOrDefault(request.getConversationId(), "未指定") + "\n"
+                + "datasourceId=" + datasource;
     }
 
     private void finishSuccessfully(RunState state) {
@@ -351,23 +403,28 @@ class DataAgent {
         if (!runs.remove(state.threadId, state)) {
             return;
         }
-        String message = error.getMessage() == null ? "Agent 执行失败" : error.getMessage();
-        state.sink.tryEmitNext(ServerSentEvent.<AgentStreamEvent>builder().event("error")
-                .data(new AgentStreamEvent(state.agentId, state.threadId, ReActEventType.ERROR, "error", 1,
-                        "Agent", "TEXT", message, true, true))
-                .build());
+        state.sink.tryEmitNext(buildErrorEvent(state, error));
         state.sink.tryEmitComplete();
+    }
+
+    private static ServerSentEvent<AgentStreamEvent> buildErrorEvent(RunState state, Throwable error) {
+        String message = error.getMessage() == null ? "Agent 执行失败" : error.getMessage();
+        return ServerSentEvent.<AgentStreamEvent>builder()
+                .event("error")
+                .data(new AgentStreamEvent(state.agentId, state.threadId, ReActEventType.ERROR, "error", 1,
+                        "Agent", TextType.TEXT.name(), message, true, true))
+                .build();
     }
 
     private ServerSentEvent<AgentStreamEvent> errorEvent(RunState state, String message) {
         return ServerSentEvent.<AgentStreamEvent>builder().event("error")
                 .data(new AgentStreamEvent(state.agentId, state.threadId, ReActEventType.ERROR, "error", 1,
-                        "Agent", "TEXT", message, true, true))
+                        "Agent", TextType.TEXT.name(), message, true, true))
                 .build();
     }
 
-    private static String toolStepId(String id, String fallback) {
-        return fallback + ":" + valueOrDefault(id, fallback);
+    private static String toolStepId(RunState state, String toolCallId, String replyId, String fallback) {
+        return fallback + ":" + state.resolveToolCorrelationId(toolCallId, replyId, fallback);
     }
 
     private static String valueOrDefault(String value, String fallback) {

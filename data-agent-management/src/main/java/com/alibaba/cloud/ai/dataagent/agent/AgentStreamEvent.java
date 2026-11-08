@@ -17,7 +17,14 @@ package com.alibaba.cloud.ai.dataagent.agent;
 
 public record AgentStreamEvent(String agentId, String threadId, ReActEventType eventType,
                                String stepId, int attempt, String nodeName, String textType, String text,
-                               boolean error, boolean complete) implements AgentResponse {
+                               boolean error, boolean complete, long timestamp) implements AgentResponse {
+
+    public AgentStreamEvent(String agentId, String threadId, ReActEventType eventType,
+                            String stepId, int attempt, String nodeName, String textType, String text,
+                            boolean error, boolean complete) {
+        this(agentId, threadId, eventType, stepId, attempt, nodeName, textType, text, error, complete,
+                System.currentTimeMillis());
+    }
 
     @Override
     public String getText() {

@@ -27,7 +27,9 @@
 				class="message-block"
 				:class="[
 					`message-block--${message.role}`,
-					{ 'message-block--timeline': message.messageType === 'timeline' },
+					{
+						'message-block--timeline': message.messageType === 'timeline',
+					},
 				]"
 			>
 				<div v-if="message.role === 'user'" class="user-message">
@@ -92,13 +94,26 @@
 					/>
 				</template>
 				<div
-					v-if="shouldShowActions(message) && !isEditing(message)"
+					v-if="
+						(shouldShowActions(message) || store.hasTrace(message)) &&
+						!isEditing(message)
+					"
 					class="message-actions"
 					:class="{ 'message-actions--user': message.role === 'user' }"
 				>
 					<time v-if="formatTime(message.createTime)" class="message-time">
 						{{ formatTime(message.createTime) }}
 					</time>
+					<button
+						v-if="store.hasTrace(message)"
+						type="button"
+						class="message-action"
+						title="查看消息轨迹"
+						aria-label="查看消息轨迹"
+						@click="store.openTraceForMessage(message)"
+					>
+						<v-icon size="17">mdi-timeline-text-outline</v-icon>
+					</button>
 					<button
 						type="button"
 						class="message-action"
@@ -314,15 +329,28 @@ onUnmounted(() => {
 	overflow-y: auto;
 	scroll-behavior: smooth;
 	background: #fff;
+	scrollbar-color: #aeb8c6 transparent;
+	scrollbar-width: thin;
 }
 
 .react-message-list::-webkit-scrollbar {
-	width: 6px;
+	width: 8px;
+}
+
+.react-message-list::-webkit-scrollbar-track {
+	background: transparent;
 }
 
 .react-message-list::-webkit-scrollbar-thumb {
-	border-radius: 8px;
-	background: #dfe4ec;
+	border: 2px solid transparent;
+	border-radius: 999px;
+	background: #aeb8c6;
+	background-clip: padding-box;
+}
+
+.react-message-list::-webkit-scrollbar-thumb:hover {
+	background: #7f8da1;
+	background-clip: padding-box;
 }
 
 .messages-column {

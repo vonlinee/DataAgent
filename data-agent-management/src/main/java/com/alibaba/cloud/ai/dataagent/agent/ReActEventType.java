@@ -20,6 +20,12 @@ package com.alibaba.cloud.ai.dataagent.agent;
  */
 public enum ReActEventType implements EventType {
 
+    CONTEXT,
+
+    USER_MESSAGE,
+
+    ASSISTANT,
+
     THINKING,
 
     TOOL_CALL,

@@ -61,4 +61,26 @@ class DataAgentTest {
         assertThat(DataAgent.resolveMaxLoopCount(agent)).isEqualTo(10);
     }
 
+    @Test
+    void infersTraceTextTypesForToolResults() {
+        assertThat(DataAgent.inferTextType("{\"path\":\"SKILL.md\"}"))
+            .isEqualTo("JSON");
+        assertThat(DataAgent.inferTextType("```sql\nselect 1\n```"))
+            .isEqualTo("SQL");
+        assertThat(DataAgent.inferTextType("select 1"))
+            .isEqualTo("SQL");
+        assertThat(DataAgent.inferTextType("执行成功"))
+            .isEqualTo("TEXT");
+    }
+
+    @Test
+    void correlatesToolResultWhenOnlyReplyIdIsPresent() {
+        RunState state = new RunState("agent", "conversation", "thread");
+
+        assertThat(state.resolveToolCorrelationId("tool-call-1", "reply-1", "tool-call"))
+            .isEqualTo("tool-call-1");
+        assertThat(state.resolveToolCorrelationId(null, "reply-1", "tool-result"))
+            .isEqualTo("tool-call-1");
+    }
+
 }
