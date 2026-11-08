@@ -55,14 +55,16 @@
 			</div>
 
 			<div v-else-if="filteredTables.length > 0" class="table-browser" aria-label="数据表列表">
-				<v-data-table-virtual
+				<v-data-table
 					v-model:expanded="expandedTableNames"
 					:headers="tableHeaders"
 					:items="filteredTables"
 					item-value="name"
 					show-expand
+					:items-per-page="-1"
+					hide-default-footer
+					fixed-header
 					hover
-					:item-height="64"
 					height="420"
 					class="table-virtual-table"
 				>
@@ -75,14 +77,19 @@
 					<template #item.schema="{ item }"><span class="cell-muted text-truncate" :title="item.schema || '—'">{{ item.schema || '—' }}</span></template>
 					<template #item.name="{ item }"><div class="table-name-cell text-truncate" :title="item.name"><v-icon size="16" color="primary" class="mr-2">mdi-table</v-icon><span>{{ item.name }}</span></div></template>
 					<template #item.type="{ item }"><v-chip :color="tableTypeColor(item.type)" size="small" variant="tonal" class="table-type-chip">{{ tableTypeLabel(item.type) }}</v-chip></template>
-					<template #item.description="{ item }"><span class="cell-muted text-truncate" :title="item.description || '暂无注释'">{{ item.description || '暂无注释' }}</span></template>
+					<template #item.description="{ item }"><span class="cell-muted text-truncate" :title="item.description || ''">{{ item.description || '' }}</span></template>
 					<template #expanded-row="{ columns, item }">
 						<tr>
 							<td :colspan="columns.length" class="pa-0">
 								<div class="inline-column-panel" aria-live="polite">
 									<div class="column-panel-header">
-										<div class="min-width-0"><div class="text-subtitle-2 font-weight-bold text-truncate" :title="item.name">列信息 · {{ item.name }}</div><div class="text-caption text-medium-emphasis text-truncate">{{ item.schema || '默认 schema' }} · {{ item.description || '暂无表注释' }}</div></div>
-										<v-chip size="small" variant="tonal" color="primary">{{ columnsFor(item.name).length }} 列</v-chip>
+										<div class="column-panel-title min-width-0">
+											<span class="column-panel-title-primary text-subtitle-2 font-weight-bold text-no-wrap" :title="item.name">列信息 · {{ item.name }}</span>
+											<span class="column-panel-meta text-caption text-medium-emphasis text-truncate" :title="item.description || item.schema || '默认 schema'">
+												{{ item.schema || '默认 schema' }}<span v-if="item.description"> · {{ item.description }}</span>
+											</span>
+										</div>
+										<v-chip class="column-panel-count" size="small" variant="tonal" color="primary">{{ columnsFor(item.name).length }} 列</v-chip>
 									</div>
 									<v-progress-linear v-if="isColumnsLoading(item.name)" indeterminate color="primary" height="2" />
 									<div v-else-if="columnsFor(item.name).length === 0" class="column-empty column-empty-small"><v-icon size="24" color="grey-lighten-1" class="mb-2">mdi-view-column-outline</v-icon><span class="text-caption text-medium-emphasis">暂无列信息</span></div>
@@ -98,7 +105,7 @@
 							</td>
 						</tr>
 					</template>
-				</v-data-table-virtual>
+				</v-data-table>
 			</div>
 
 			<div v-else-if="!loadingTables && !fetchError && allTables.length > 0" class="empty-state"><v-icon size="40" color="grey" class="mb-2">mdi-table-search</v-icon><p class="text-body-2 text-medium-emphasis">没有匹配“{{ searchQuery.trim() }}”的数据表</p></div>
@@ -194,15 +201,19 @@ function isColumnsLoading(tableName: string): boolean {
 .table-type-chip { min-width: 48px; justify-content: center; }
 .cell-muted { color: #64748b; font-size: 13px; }
 .inline-column-panel { margin: 0 16px 16px 48px; border: 1px solid #dbeafe; border-radius: 8px; overflow: hidden; background: #f8fbff; }
-.column-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.column-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 8px 16px; background: #fff; border-bottom: 1px solid #e2e8f0; }
+.column-panel-title { display: flex; flex: 1 1 auto; align-items: baseline; gap: 8px; min-width: 0; }
+.column-panel-title-primary { flex: 0 1 auto; max-width: 65%; overflow: hidden; text-overflow: ellipsis; }
+.column-panel-meta { flex: 1 1 auto; min-width: 0; }
+.column-panel-count { flex: 0 0 auto; }
 .column-empty { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; min-height: 300px; padding: 24px; text-align: center; }
 .column-empty-small { min-height: 360px; }
 .columns-header, .columns-grid { display: grid; grid-template-columns: minmax(120px, 1.1fr) minmax(80px, 0.8fr) minmax(92px, 0.9fr) minmax(110px, 1fr); align-items: center; gap: 12px; }
-.columns-header { min-height: 40px; padding: 0 16px; color: #64748b; font-size: 12px; font-weight: 600; background: #fff; border-bottom: 1px solid #e2e8f0; }
+.columns-header { min-height: 40px; padding: 0 16px; color: #475569; font-size: 12px; font-weight: 600; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
 .column-row { min-height: 48px; padding: 0 16px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
 .constraint-cell { display: flex; flex-wrap: wrap; gap: 4px; }
 .empty-state, .error-state { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 160px; padding: 24px; }
 .expand-row-content { animation: expandSlideDown 0.3s ease-out; }
 @keyframes expandSlideDown { from { max-height: 0; opacity: 0; overflow: hidden; } to { max-height: 900px; opacity: 1; overflow: visible; } }
-@media (max-width: 640px) { .manager-toolbar { align-items: flex-start; flex-direction: column; } .columns-header, .columns-grid { grid-template-columns: minmax(110px, 1fr) minmax(76px, 0.8fr) minmax(80px, 0.8fr); } .columns-grid > :last-child { display: none; } }
+@media (max-width: 640px) { .manager-toolbar { align-items: flex-start; flex-direction: column; } .column-panel-header { gap: 8px; padding: 8px 12px; } .column-panel-title { gap: 4px; } .column-panel-title-primary { max-width: 55%; } .columns-header, .columns-grid { grid-template-columns: minmax(110px, 1fr) minmax(76px, 0.8fr) minmax(80px, 0.8fr); } .columns-grid > :last-child { display: none; } }
 </style>
