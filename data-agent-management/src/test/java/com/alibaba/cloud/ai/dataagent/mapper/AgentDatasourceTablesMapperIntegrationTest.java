@@ -47,7 +47,11 @@ class AgentDatasourceTablesMapperIntegrationTest {
 		jdbcTemplate.execute("""
 				CREATE TABLE agent_datasource_tables (
 				  agent_datasource_id INT NOT NULL,
+				  schema_name VARCHAR(255) NOT NULL DEFAULT '',
 				  table_name VARCHAR(255) NOT NULL,
+				  table_type VARCHAR(50),
+				  table_comment VARCHAR(1000),
+				  update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 				  UNIQUE (agent_datasource_id, table_name)
 				)
 				""");
@@ -57,13 +61,33 @@ class AgentDatasourceTablesMapperIntegrationTest {
 	void selectedTablesAreUnionedAcrossAgentsSharingDatasource() {
 		jdbcTemplate.update("INSERT INTO agent_datasource VALUES (1, 10, 3, 1), (2, 11, 3, 1), (3, 12, 4, 1)");
 		jdbcTemplate.update("""
-				INSERT INTO agent_datasource_tables VALUES
+				INSERT INTO agent_datasource_tables (agent_datasource_id, table_name) VALUES
 				  (1, 'orders'), (1, 'users'),
 				  (2, 'orders'), (2, 'products'),
 				  (3, 'unrelated_table')
 				""");
 
 		assertThat(mapper.getSelectedTablesByDatasourceId(3)).containsExactly("orders", "products", "users");
+	}
+
+	@Test
+	void tableMetadataCanBeUpdatedAndReadForDatasource() {
+		jdbcTemplate.update("INSERT INTO agent_datasource VALUES (1, 10, 3, 1)");
+		jdbcTemplate.update("""
+				INSERT INTO agent_datasource_tables
+				(agent_datasource_id, schema_name, table_name, table_type, table_comment)
+				VALUES (1, 'public', 'orders', NULL, NULL)
+				""");
+
+		mapper.updateTableMetadataByDatasourceId(3, "orders", "public", "订单表", "TABLE");
+
+		assertThat(mapper.getTableMetadataByDatasourceId(3)).singleElement()
+			.satisfies(table -> {
+				assertThat(table.getName()).isEqualTo("orders");
+				assertThat(table.getSchema()).isEqualTo("public");
+				assertThat(table.getType()).isEqualTo("TABLE");
+				assertThat(table.getDescription()).isEqualTo("订单表");
+			});
 	}
 
 }

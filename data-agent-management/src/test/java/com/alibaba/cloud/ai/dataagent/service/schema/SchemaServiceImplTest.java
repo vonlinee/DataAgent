@@ -18,9 +18,14 @@ package com.alibaba.cloud.ai.dataagent.service.schema;
 import com.alibaba.cloud.ai.dataagent.bo.DbConfigBO;
 import com.alibaba.cloud.ai.dataagent.bo.schema.ForeignKeyInfoBO;
 import com.alibaba.cloud.ai.dataagent.connector.accessor.AccessorFactory;
+import com.alibaba.cloud.ai.dataagent.connector.accessor.Accessor;
+import com.alibaba.cloud.ai.dataagent.dto.datasource.SchemaInitRequest;
 import com.alibaba.cloud.ai.dataagent.dto.schema.SchemaDTO;
 import com.alibaba.cloud.ai.dataagent.dto.schema.TableDTO;
 import com.alibaba.cloud.ai.dataagent.properties.DataAgentProperties;
+import com.alibaba.cloud.ai.dataagent.bo.schema.TableInfoBO;
+import com.alibaba.cloud.ai.dataagent.service.datasource.DatasourceMetadataService;
+import com.alibaba.cloud.ai.dataagent.service.datasource.DatasourceTableMetadataStore;
 import com.alibaba.cloud.ai.dataagent.service.vectorstore.AgentVectorStoreService;
 import com.alibaba.cloud.ai.dataagent.service.vectorstore.DynamicFilterService;
 import org.junit.jupiter.api.BeforeEach;
@@ -61,6 +66,12 @@ class SchemaServiceImplTest {
 	@Mock
 	private AgentVectorStoreService agentVectorStoreService;
 
+	@Mock
+	private DatasourceTableMetadataStore datasourceTableMetadataStore;
+
+	@Mock
+	private DatasourceMetadataService datasourceMetadataService;
+
 	private SchemaServiceImpl schemaService;
 
 	@BeforeEach
@@ -68,7 +79,29 @@ class SchemaServiceImplTest {
 		ExecutorService executor = Executors.newSingleThreadExecutor();
 		dataAgentProperties = new DataAgentProperties();
 		schemaService = new SchemaServiceImpl(executor, accessorFactory, tableMetadataService, batchingStrategy,
-				dynamicFilterService, dataAgentProperties, agentVectorStoreService);
+			dynamicFilterService, dataAgentProperties, agentVectorStoreService, datasourceTableMetadataStore,
+			datasourceMetadataService);
+	}
+
+	@Test
+	void schemaPersistsTableTypeFromJdbcMetadataWhenConnectorOmitsIt() throws Exception {
+		Accessor accessor = mock(Accessor.class);
+		DbConfigBO config = new DbConfigBO();
+		SchemaInitRequest request = new SchemaInitRequest();
+		request.setDbConfig(config);
+		request.setTables(List.of("orders"));
+		when(accessorFactory.getAccessorByDbConfig(config)).thenReturn(accessor);
+		when(accessor.showForeignKeys(any(), any())).thenReturn(List.of());
+		when(accessor.fetchTables(any(), any())).thenReturn(List.of(TableInfoBO.builder().name("orders").build()));
+		when(datasourceMetadataService.getDatasourceTableDetails(1))
+			.thenReturn(List.of(TableInfoBO.builder().name("orders").schema("public").type("VIEW").build()));
+
+		assertTrue(schemaService.schema(1, request));
+
+		ArgumentCaptor<List<TableInfoBO>> captor = ArgumentCaptor.forClass(List.class);
+		verify(datasourceTableMetadataStore).save(eq(1), captor.capture());
+		assertEquals("VIEW", captor.getValue().get(0).getType());
+		assertEquals("public", captor.getValue().get(0).getSchema());
 	}
 
 	private Document createTableDoc(String name) {

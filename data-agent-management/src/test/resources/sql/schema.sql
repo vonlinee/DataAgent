@@ -137,6 +137,41 @@ CREATE TABLE IF NOT EXISTS agent_datasource (
   FOREIGN KEY (datasource_id) REFERENCES datasource(id) ON DELETE CASCADE
 ) ENGINE = InnoDB COMMENT = '智能体数据源关联表';
 
+-- 智能体数据源选择的表及初始化时捕获的表级元数据
+CREATE TABLE IF NOT EXISTS agent_datasource_tables (
+  id INT NOT NULL AUTO_INCREMENT,
+  agent_datasource_id INT NOT NULL COMMENT '智能体数据源ID',
+  schema_name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '初始化时捕获的数据表Schema名称',
+  table_name VARCHAR(255) NOT NULL COMMENT '数据表名',
+  table_type VARCHAR(50) COMMENT '初始化时捕获的数据表类型：TABLE或VIEW',
+  table_comment VARCHAR(1000) COMMENT '初始化时捕获的数据表注释',
+  create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_agent_datasource_table (agent_datasource_id, table_name),
+  FOREIGN KEY (agent_datasource_id) REFERENCES agent_datasource(id) ON DELETE CASCADE
+) ENGINE = InnoDB COMMENT = '智能体数据源所选表及初始化元数据';
+
+-- 数据源初始化时保存的列元数据
+CREATE TABLE IF NOT EXISTS datasource_table_columns (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  datasource_id INT NOT NULL COMMENT '数据源ID',
+  schema_name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '初始化时捕获的Schema名称',
+  table_name VARCHAR(255) NOT NULL COMMENT '数据表名',
+  column_name VARCHAR(255) NOT NULL COMMENT '列名',
+  column_comment VARCHAR(1000) COMMENT '列注释',
+  data_type VARCHAR(255) COMMENT '列数据类型',
+  is_primary TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否主键：0-否，1-是',
+  is_notnull TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否非空：0-否，1-是',
+  samples TEXT COMMENT '初始化时采集的列样本JSON',
+  ordinal_position INT COMMENT '列在表中的顺序，从1开始',
+  create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_datasource_table_column (datasource_id, schema_name, table_name, column_name),
+  FOREIGN KEY (datasource_id) REFERENCES datasource(id) ON DELETE CASCADE
+) ENGINE = InnoDB COMMENT = '数据源初始化时保存的表列元数据';
+
 -- 智能体预设问题表
 CREATE TABLE IF NOT EXISTS agent_preset_question (
   id INT NOT NULL AUTO_INCREMENT,

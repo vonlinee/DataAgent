@@ -16,13 +16,18 @@
 package com.alibaba.cloud.ai.dataagent.controller;
 
 import com.alibaba.cloud.ai.dataagent.dto.datasource.DatasourceTypeDTO;
+import com.alibaba.cloud.ai.dataagent.dto.datasource.UpdateDatasourceCommentsDTO;
 import com.alibaba.cloud.ai.dataagent.dto.schema.CreateLogicalRelationDTO;
 import com.alibaba.cloud.ai.dataagent.dto.schema.UpdateLogicalRelationDTO;
+import com.alibaba.cloud.ai.dataagent.bo.schema.ColumnInfoBO;
+import com.alibaba.cloud.ai.dataagent.bo.schema.TableInfoBO;
 import com.alibaba.cloud.ai.dataagent.entity.Datasource;
 import com.alibaba.cloud.ai.dataagent.entity.LogicalRelation;
 import com.alibaba.cloud.ai.dataagent.exception.InternalServerException;
 import com.alibaba.cloud.ai.dataagent.exception.InvalidInputException;
 import com.alibaba.cloud.ai.dataagent.service.datasource.DatasourceService;
+import com.alibaba.cloud.ai.dataagent.service.datasource.DatasourceCommentService;
+import com.alibaba.cloud.ai.dataagent.service.datasource.DatasourceMetadataService;
 import com.alibaba.cloud.ai.dataagent.vo.ApiResponse;
 import com.alibaba.cloud.ai.dataagent.vo.DatasourceConnectionTestResult;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,11 +50,58 @@ class DatasourceControllerTest {
 	@Mock
 	private DatasourceService datasourceService;
 
+	@Mock
+	private DatasourceMetadataService datasourceMetadataService;
+
+	@Mock
+	private DatasourceCommentService datasourceCommentService;
+
 	private DatasourceController datasourceController;
 
 	@BeforeEach
 	void setUp() {
-		datasourceController = new DatasourceController(datasourceService);
+		datasourceController = new DatasourceController(datasourceService, datasourceMetadataService);
+	}
+
+	@Test
+	void updateComments_submitsBatchForDatasource() throws Exception {
+		when(datasourceService.getDatasourceById(1))
+			.thenReturn(Datasource.builder().id(1).name("test").build());
+		datasourceController = new DatasourceController(datasourceService, datasourceMetadataService,
+			datasourceCommentService);
+		UpdateDatasourceCommentsDTO request = new UpdateDatasourceCommentsDTO();
+		request.setTables(List.of());
+
+		ApiResponse<Void> result = datasourceController.updateComments(1, request);
+
+		assertTrue(result.isSuccess());
+		verify(datasourceCommentService).updateComments(1, request);
+	}
+
+	@Test
+	void getInitializedDatasourceTableDetails_returnsCachedMetadata() throws Exception {
+		Datasource datasource = Datasource.builder().id(1).name("test").build();
+		when(datasourceService.getDatasourceById(1)).thenReturn(datasource);
+		when(datasourceMetadataService.getInitializedDatasourceTableDetails(1))
+			.thenReturn(List.of(TableInfoBO.builder().name("orders").type("TABLE").build()));
+
+		List<TableInfoBO> result = datasourceController.getInitializedDatasourceTableDetails(1);
+
+		assertEquals("orders", result.get(0).getName());
+	}
+
+	@Test
+	void getInitializedTableColumnDetails_returnsCachedColumns() throws Exception {
+		Datasource datasource = Datasource.builder().id(1).name("test").build();
+		when(datasourceService.getDatasourceById(1)).thenReturn(datasource);
+		when(datasourceMetadataService.getInitializedTableColumnDetails(1, "orders", "public"))
+			.thenReturn(List.of(ColumnInfoBO.builder().name("id").type("int").build()));
+
+		ApiResponse<List<ColumnInfoBO>> result = datasourceController.getInitializedTableColumnDetails(1, "orders",
+			"public");
+
+		assertTrue(result.isSuccess());
+		assertEquals("id", result.getData().get(0).getName());
 	}
 
 	@Test

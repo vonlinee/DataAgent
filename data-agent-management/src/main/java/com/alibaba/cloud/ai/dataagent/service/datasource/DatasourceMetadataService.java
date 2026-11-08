@@ -24,6 +24,18 @@ public interface DatasourceMetadataService {
 
 	List<TableInfoBO> getDatasourceTableDetails(Integer datasourceId) throws Exception;
 
-	List<ColumnInfoBO> getTableColumnDetails(Integer datasourceId, String tableName) throws Exception;
+	/** Return table details merged with the metadata captured during initialization. */
+	List<TableInfoBO> getInitializedDatasourceTableDetails(Integer datasourceId) throws Exception;
+
+	/** Backward-compatible column lookup for callers that do not have a schema name. */
+	default List<ColumnInfoBO> getTableColumnDetails(Integer datasourceId, String tableName) throws Exception {
+		return getTableColumnDetails(datasourceId, tableName, null);
+	}
+
+	List<ColumnInfoBO> getTableColumnDetails(Integer datasourceId, String tableName, String schemaName) throws Exception;
+
+	/** Return only initialized column metadata; this method never queries the business database. */
+	List<ColumnInfoBO> getInitializedTableColumnDetails(Integer datasourceId, String tableName, String schemaName)
+			throws Exception;
 
 }

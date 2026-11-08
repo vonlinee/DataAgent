@@ -16,6 +16,7 @@
 package com.alibaba.cloud.ai.dataagent.controller;
 
 import com.alibaba.cloud.ai.dataagent.dto.datasource.DatasourceTypeDTO;
+import com.alibaba.cloud.ai.dataagent.dto.datasource.UpdateDatasourceCommentsDTO;
 import com.alibaba.cloud.ai.dataagent.dto.schema.CreateLogicalRelationDTO;
 import com.alibaba.cloud.ai.dataagent.dto.schema.UpdateLogicalRelationDTO;
 import com.alibaba.cloud.ai.dataagent.bo.schema.ColumnInfoBO;
@@ -26,6 +27,7 @@ import com.alibaba.cloud.ai.dataagent.enums.BizDataSourceTypeEnum;
 import com.alibaba.cloud.ai.dataagent.exception.InternalServerException;
 import com.alibaba.cloud.ai.dataagent.exception.InvalidInputException;
 import com.alibaba.cloud.ai.dataagent.service.datasource.DatasourceService;
+import com.alibaba.cloud.ai.dataagent.service.datasource.DatasourceCommentService;
 import com.alibaba.cloud.ai.dataagent.service.datasource.DatasourceMetadataService;
 import com.alibaba.cloud.ai.dataagent.vo.ApiResponse;
 import com.alibaba.cloud.ai.dataagent.vo.DatasourceConnectionTestResult;
@@ -60,16 +62,25 @@ public class DatasourceController {
 
 	private final DatasourceMetadataService datasourceMetadataService;
 
+	private final DatasourceCommentService datasourceCommentService;
+
 	/** Keep the legacy constructor available for existing controller tests and integrations. */
 	public DatasourceController(DatasourceService datasourceService) {
-		this(datasourceService, null);
+		this(datasourceService, null, null);
+	}
+
+	/** Keep the two-argument constructor available for existing controller tests. */
+	public DatasourceController(DatasourceService datasourceService,
+			DatasourceMetadataService datasourceMetadataService) {
+		this(datasourceService, datasourceMetadataService, null);
 	}
 
 	@Autowired
 	public DatasourceController(DatasourceService datasourceService,
-			DatasourceMetadataService datasourceMetadataService) {
+			DatasourceMetadataService datasourceMetadataService, DatasourceCommentService datasourceCommentService) {
 		this.datasourceService = datasourceService;
 		this.datasourceMetadataService = datasourceMetadataService;
+		this.datasourceCommentService = datasourceCommentService;
 	}
 
 	/**
@@ -141,6 +152,20 @@ public class DatasourceController {
 		checkDatasourceExists(id);
 		try {
 			return datasourceMetadataService.getDatasourceTableDetails(id);
+		}
+		catch (Exception e) {
+			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+		}
+	}
+
+	/**
+	 * Return table details with comments/types captured by the last Schema initialization.
+	 */
+	@GetMapping("/{id}/tables/initialized-details")
+	public List<TableInfoBO> getInitializedDatasourceTableDetails(@PathVariable Integer id) {
+		checkDatasourceExists(id);
+		try {
+			return datasourceMetadataService.getInitializedDatasourceTableDetails(id);
 		}
 		catch (Exception e) {
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
@@ -237,13 +262,48 @@ public class DatasourceController {
 
 	@GetMapping("/{id}/tables/{tableName}/columns/details")
 	public ApiResponse<List<ColumnInfoBO>> getTableColumnDetails(@PathVariable Integer id,
-			@PathVariable String tableName) {
+			@PathVariable String tableName,
+			@RequestParam(value = "schema", required = false) String schemaName) {
 		try {
-			List<ColumnInfoBO> columns = datasourceMetadataService.getTableColumnDetails(id, tableName);
+			List<ColumnInfoBO> columns = datasourceMetadataService.getTableColumnDetails(id, tableName, schemaName);
 			return ApiResponse.success("获取字段详情成功", columns);
 		}
 		catch (Exception e) {
 			throw new InternalServerException("获取字段详情失败：" + e.getMessage());
+		}
+	}
+
+	/** Return the column snapshot captured by Schema initialization without touching the business database. */
+	@GetMapping("/{id}/tables/{tableName}/columns/initialized-details")
+	public ApiResponse<List<ColumnInfoBO>> getInitializedTableColumnDetails(@PathVariable Integer id,
+			@PathVariable String tableName,
+			@RequestParam(value = "schema", required = false) String schemaName) {
+		try {
+			checkDatasourceExists(id);
+			List<ColumnInfoBO> columns = datasourceMetadataService.getInitializedTableColumnDetails(id, tableName,
+				schemaName);
+			return ApiResponse.success("获取初始化字段详情成功", columns);
+		}
+		catch (Exception e) {
+			throw new InternalServerException("获取初始化字段详情失败：" + e.getMessage());
+		}
+	}
+
+	/** Apply table and column comments to the business database in one batch. */
+	@PutMapping("/{id}/comments")
+	public ApiResponse<Void> updateComments(@PathVariable Integer id,
+			@Valid @RequestBody UpdateDatasourceCommentsDTO request) {
+		checkDatasourceExists(id);
+		try {
+			datasourceCommentService.updateComments(id, request);
+			return ApiResponse.success("数据库注释更新成功");
+		}
+		catch (UnsupportedOperationException exception) {
+			throw new InvalidInputException(exception.getMessage());
+		}
+		catch (Exception exception) {
+			log.error("Failed to update comments for datasource: {}", id, exception);
+			throw new InternalServerException("数据库注释更新失败：" + exception.getMessage());
 		}
 	}
 

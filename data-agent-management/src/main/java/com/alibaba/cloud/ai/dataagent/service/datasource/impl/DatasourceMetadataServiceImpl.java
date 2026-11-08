@@ -24,6 +24,7 @@ import com.alibaba.cloud.ai.dataagent.connector.accessor.AccessorFactory;
 import com.alibaba.cloud.ai.dataagent.connector.pool.DBConnectionPool;
 import com.alibaba.cloud.ai.dataagent.connector.pool.DBConnectionPoolFactory;
 import com.alibaba.cloud.ai.dataagent.service.datasource.DatasourceMetadataService;
+import com.alibaba.cloud.ai.dataagent.service.datasource.DatasourceTableMetadataStore;
 import com.alibaba.cloud.ai.dataagent.service.datasource.DatasourceService;
 import com.alibaba.cloud.ai.dataagent.service.datasource.handler.DatasourceTypeHandler;
 import com.alibaba.cloud.ai.dataagent.service.datasource.handler.registry.DatasourceTypeHandlerRegistry;
@@ -51,6 +52,8 @@ public class DatasourceMetadataServiceImpl implements DatasourceMetadataService 
 	private final DatasourceTypeHandlerRegistry datasourceTypeHandlerRegistry;
 
 	private final DBConnectionPoolFactory dbConnectionPoolFactory;
+
+	private final DatasourceTableMetadataStore metadataStore;
 
 	@Override
 	public List<TableInfoBO> getDatasourceTableDetails(Integer datasourceId) throws Exception {
@@ -93,6 +96,43 @@ public class DatasourceMetadataServiceImpl implements DatasourceMetadataService 
 			}
 		}
 		return tablesByKey.values().stream().sorted(java.util.Comparator.comparing(TableInfoBO::getName)).toList();
+	}
+
+	@Override
+	public List<TableInfoBO> getInitializedDatasourceTableDetails(Integer datasourceId) throws Exception {
+		Map<String, TableInfoBO> cachedTables = metadataStore.findTables(datasourceId);
+		List<TableInfoBO> tables;
+		try {
+			// Keep the live table list so users can select newly created tables; cached
+			// metadata is used for comments/types and as an outage fallback.
+			tables = getDatasourceTableDetails(datasourceId);
+		}
+		catch (Exception exception) {
+			if (cachedTables.isEmpty()) {
+				throw exception;
+			}
+			tables = cachedTables.values().stream()
+				.sorted(java.util.Comparator.comparing(TableInfoBO::getName))
+				.toList();
+		}
+		for (TableInfoBO table : tables) {
+			TableInfoBO cached = cachedTables.get(tableKey(table.getSchema(), table.getName()));
+			if (cached == null) {
+				cached = cachedTables.get(tableKey("", table.getName()));
+			}
+			if (cached != null) {
+				if (StringUtils.isNotBlank(cached.getDescription())) {
+					table.setDescription(cached.getDescription());
+				}
+				if (StringUtils.isNotBlank(cached.getType())) {
+					table.setType(cached.getType());
+				}
+				if (StringUtils.isNotBlank(cached.getSchema())) {
+					table.setSchema(cached.getSchema());
+				}
+			}
+		}
+		return tables;
 	}
 
 	private List<TableInfoBO> readTableMetadata(Datasource datasource, DbConfigBO dbConfig, String schemaName) {
@@ -159,7 +199,8 @@ public class DatasourceMetadataServiceImpl implements DatasourceMetadataService 
 	}
 
 	@Override
-	public List<ColumnInfoBO> getTableColumnDetails(Integer datasourceId, String tableName) throws Exception {
+	public List<ColumnInfoBO> getTableColumnDetails(Integer datasourceId, String tableName, String schemaName)
+			throws Exception {
 		Datasource datasource = datasourceService.getDatasourceById(datasourceId);
 		if (datasource == null) {
 			throw new RuntimeException("Datasource not found with id: " + datasourceId);
@@ -167,13 +208,19 @@ public class DatasourceMetadataServiceImpl implements DatasourceMetadataService 
 		DbConfigBO dbConfig = datasourceService.getDbConfig(datasource);
 		DbQueryParameter queryParam = DbQueryParameter.from(dbConfig);
 		DatasourceTypeHandler handler = datasourceTypeHandlerRegistry.getRequired(datasource.getType());
-		queryParam.setSchema(handler.extractSchemaName(datasource));
+		queryParam.setSchema(StringUtils.defaultIfBlank(schemaName, handler.extractSchemaName(datasource)));
 		queryParam.setTable(tableName);
 		Accessor dbAccessor = accessorFactory.getAccessorByDbConfig(dbConfig);
 		return dbAccessor.showColumns(dbConfig, queryParam).stream()
 			.filter(column -> column.getName() != null && !column.getName().trim().isEmpty())
 			.sorted(java.util.Comparator.comparing(ColumnInfoBO::getName))
 			.toList();
+	}
+
+	@Override
+	public List<ColumnInfoBO> getInitializedTableColumnDetails(Integer datasourceId, String tableName, String schemaName) {
+		// 初始化快照统一使用空字符串表示默认 schema，避免 null 与空值无法匹配。
+		return metadataStore.findColumns(datasourceId, tableName, StringUtils.defaultString(schemaName));
 	}
 
 }

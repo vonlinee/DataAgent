@@ -236,7 +236,10 @@ CREATE TABLE IF NOT EXISTS agent_datasource_tables
 (
     id                  INT AUTO_INCREMENT PRIMARY KEY,
     agent_datasource_id INT                                 NOT NULL COMMENT '智能体数据源ID',
+    schema_name         VARCHAR(255)                        NOT NULL DEFAULT '' COMMENT '初始化时捕获的数据表Schema名称',
     table_name          VARCHAR(255)                        NOT NULL COMMENT '数据表名',
+    table_type          VARCHAR(50)                         NULL COMMENT '初始化时捕获的数据表类型：TABLE或VIEW',
+    table_comment       VARCHAR(1000)                       NULL COMMENT '初始化时捕获的数据表注释',
     create_time         TIMESTAMP DEFAULT CURRENT_TIMESTAMP NULL COMMENT '创建时间',
     update_time         TIMESTAMP DEFAULT CURRENT_TIMESTAMP NULL COMMENT '更新时间',
     CONSTRAINT uk_agent_datasource_tables_agent_datasource_id_table_name
@@ -245,6 +248,27 @@ CREATE TABLE IF NOT EXISTS agent_datasource_tables
         FOREIGN KEY (agent_datasource_id) REFERENCES agent_datasource (id)
             ON UPDATE CASCADE ON DELETE CASCADE
     ) ENGINE = InnoDB COMMENT = '某个智能体某个数据源所选中的数据表';
+
+CREATE TABLE IF NOT EXISTS datasource_table_columns
+(
+    id                BIGINT AUTO_INCREMENT PRIMARY KEY,
+    datasource_id     INT                                 NOT NULL COMMENT '数据源ID',
+    schema_name       VARCHAR(255)                        NOT NULL DEFAULT '' COMMENT '初始化时捕获的Schema名称',
+    table_name        VARCHAR(255)                        NOT NULL COMMENT '数据表名',
+    column_name       VARCHAR(255)                        NOT NULL COMMENT '列名',
+    column_comment    VARCHAR(1000)                       NULL COMMENT '列注释',
+    data_type         VARCHAR(255)                        NULL COMMENT '列数据类型',
+    is_primary        BOOLEAN DEFAULT FALSE               NOT NULL COMMENT '是否主键：FALSE-否，TRUE-是',
+    is_notnull        BOOLEAN DEFAULT FALSE               NOT NULL COMMENT '是否非空：FALSE-否，TRUE-是',
+    samples           CLOB                                NULL COMMENT '初始化时采集的列样本JSON',
+    ordinal_position  INT                                 NULL COMMENT '列在表中的顺序，从1开始',
+    create_time       TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
+    update_time       TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '更新时间',
+    CONSTRAINT uk_datasource_table_columns UNIQUE (datasource_id, schema_name, table_name, column_name),
+    CONSTRAINT fk_datasource_table_columns_datasource FOREIGN KEY (datasource_id) REFERENCES datasource (id)
+        ON UPDATE CASCADE ON DELETE CASCADE
+    );
+COMMENT ON TABLE datasource_table_columns IS '数据源初始化时保存的表列元数据';
 
 
 -- 模型配置表

@@ -1,18 +1,11 @@
-/*
- * Copyright 2026 the original author or authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+/* * Copyright 2026 the original author or authors. * * Licensed under the
+Apache License, Version 2.0 (the "License"); * you may not use this file except
+in compliance with the License. * You may obtain a copy of the License at * *
+https://www.apache.org/licenses/LICENSE-2.0 * * Unless required by applicable
+law or agreed to in writing, software * distributed under the License is
+distributed on an "AS IS" BASIS, * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. * See the License for the specific language governing
+permissions and * limitations under the License. */
 
 <template>
 	<section class="page-shell">
@@ -238,7 +231,7 @@
 								:loading-tables="loadingTablesId === item.id"
 								:fetch-error="!!(item.id && tableFetchError[item.id])"
 								:updating="updatingTablesId === item.id"
-								@update-tables="updateTables(item)"
+								@update-tables="(comments) => updateTables(item, comments)"
 								@retry="retryFetchTables(item)"
 							/>
 						</td>
@@ -264,7 +257,11 @@
 </template>
 
 <script setup lang="ts">
-import datasourceService, { type Datasource, type TableMetadata } from '@/services/datasource';
+import datasourceService, {
+	type Datasource,
+	type DatasourceCommentTableChange,
+	type TableMetadata,
+} from '@/services/datasource';
 import agentDatasourceService from '@/services/agentDatasource';
 import DatasourceFormDialog from './DatasourceFormDialog.vue';
 import ForeignKeyDialog from './ForeignKeyDialog.vue';
@@ -340,8 +337,12 @@ async function fetchActiveDatasourceForAgent() {
 		return;
 	}
 	try {
-		const res = await agentDatasourceService.getActiveAgentDatasource(agentId.value);
-		activeDatasourceId.value = res.success ? res.data?.datasourceId ?? null : null;
+		const res = await agentDatasourceService.getActiveAgentDatasource(
+			agentId.value,
+		);
+		activeDatasourceId.value = res.success
+			? (res.data?.datasourceId ?? null)
+			: null;
 		if (res.success && res.data?.datasourceId && res.data.selectTables) {
 			selectedTables.value[res.data.datasourceId] = [...res.data.selectTables];
 		}
@@ -386,12 +387,18 @@ async function handleBindDatasource(item: Datasource) {
 	}
 	bindingDatasourceId.value = item.id;
 	try {
-		const res = await agentDatasourceService.addDatasourceToAgent(agentId.value, item.id);
+		const res = await agentDatasourceService.addDatasourceToAgent(
+			agentId.value,
+			item.id,
+		);
 		if (res.success) {
 			activeDatasourceId.value = item.id;
 			$tip('已设为当前智能体数据源');
 		} else {
-			$tip(res.message || '绑定失败', { color: 'error', icon: 'mdi-alert-circle' });
+			$tip(res.message || '绑定失败', {
+				color: 'error',
+				icon: 'mdi-alert-circle',
+			});
 		}
 	} catch {
 		$tip('绑定失败', { color: 'error', icon: 'mdi-alert-circle' });
@@ -558,7 +565,11 @@ async function fetchTablesForDatasource(datasourceId: number) {
 	loadingTablesId.value = datasourceId;
 	tableFetchError.value = { ...tableFetchError.value, [datasourceId]: false };
 	try {
-		const tables = await datasourceService.getDatasourceTableDetails(datasourceId);
+		// 表列表可实时刷新，但表注释/类型优先使用最近一次初始化快照。
+		const tables =
+			await datasourceService.getInitializedDatasourceTableDetails(
+				datasourceId,
+			);
 		tableLists.value[datasourceId] = tables ?? [];
 		if (!selectedTables.value[datasourceId])
 			selectedTables.value[datasourceId] = [];
@@ -575,19 +586,51 @@ function retryFetchTables(item: Datasource) {
 	if (item.id) fetchTablesForDatasource(item.id);
 }
 
-async function updateTables(item: Datasource) {
+async function updateTables(
+	item: Datasource,
+	comments: DatasourceCommentTableChange[] = [],
+) {
 	if (!item.id) return;
 	updatingTablesId.value = item.id;
 	try {
-		const res = await agentDatasourceService.updateDatasourceTables(agentId.value || '', {
-			datasourceId: item.id,
-			tables: selectedTables.value[item.id] ?? [],
-		});
+		const res = await agentDatasourceService.updateDatasourceTables(
+			agentId.value || '',
+			{
+				datasourceId: item.id,
+				tables: selectedTables.value[item.id] ?? [],
+			},
+		);
 		if (res.success) {
-			$tip(`已保存 ${selectedTables.value[item.id]?.length ?? 0} 个表`);
+			if (comments.length > 0) {
+				const commentRes = await datasourceService.updateDatasourceComments(
+					item.id,
+					comments,
+				);
+				if (!commentRes.success) {
+					$tip(commentRes.message || '数据库注释更新失败', {
+						color: 'error',
+						icon: 'mdi-alert-circle',
+					});
+					return;
+				}
+			}
+			await fetchTablesForDatasource(item.id);
+			$tip(
+				comments.length > 0
+					? `已更新 ${comments.length} 个表的注释`
+					: `已保存 ${selectedTables.value[item.id]?.length ?? 0} 个表`,
+			);
 		} else {
-			$tip(res.message || '更新失败', { color: 'error', icon: 'mdi-alert-circle' });
+			$tip(res.message || '更新失败', {
+				color: 'error',
+				icon: 'mdi-alert-circle',
+			});
 		}
+	} catch (error: unknown) {
+		$tip(error instanceof Error ? error.message : '更新数据库失败', {
+			color: 'error',
+			icon: 'mdi-alert-circle',
+		});
 	} finally {
 		updatingTablesId.value = null;
 	}

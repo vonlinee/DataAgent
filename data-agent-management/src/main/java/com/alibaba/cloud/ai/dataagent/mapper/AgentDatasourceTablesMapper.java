@@ -15,11 +15,13 @@
  */
 package com.alibaba.cloud.ai.dataagent.mapper;
 
+import com.alibaba.cloud.ai.dataagent.bo.schema.TableInfoBO;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
 
@@ -41,6 +43,30 @@ public interface AgentDatasourceTablesMapper {
 			ORDER BY adt.table_name
 			""")
 	List<String> getSelectedTablesByDatasourceId(@Param("datasourceId") int datasourceId);
+
+	/**
+	 * Read table comments and types captured by Schema initialization. The same
+	 * metadata is copied to every agent relation that selected this table.
+	 */
+	@Select("""
+			SELECT adt.table_name AS name, adt.schema_name AS `schema`,
+			       adt.table_comment AS description, adt.table_type AS type
+			FROM agent_datasource_tables adt
+			JOIN agent_datasource ad ON ad.id = adt.agent_datasource_id
+			WHERE ad.datasource_id = #{datasourceId}
+			""")
+	List<TableInfoBO> getTableMetadataByDatasourceId(@Param("datasourceId") int datasourceId);
+
+	/** Update the initialized comment/type for all agent relations sharing a table. */
+	@Update("""
+			UPDATE agent_datasource_tables
+			SET schema_name = #{schemaName}, table_comment = #{tableComment}, table_type = #{tableType}, update_time = NOW()
+			WHERE table_name = #{tableName}
+			  AND agent_datasource_id IN (SELECT id FROM agent_datasource WHERE datasource_id = #{datasourceId})
+			""")
+	int updateTableMetadataByDatasourceId(@Param("datasourceId") Integer datasourceId,
+			@Param("tableName") String tableName, @Param("schemaName") String schemaName,
+			@Param("tableComment") String tableComment, @Param("tableType") String tableType);
 
 	// 删除当前列表中不存在的表
 	@Delete("<script>" + "DELETE FROM agent_datasource_tables WHERE agent_datasource_id = #{agentDatasourceId}"

@@ -32,6 +32,8 @@ import com.alibaba.cloud.ai.dataagent.dto.schema.SchemaDTO;
 import com.alibaba.cloud.ai.dataagent.dto.schema.TableDTO;
 import com.alibaba.cloud.ai.dataagent.service.vectorstore.AgentVectorStoreService;
 import com.alibaba.cloud.ai.dataagent.service.vectorstore.DynamicFilterService;
+import com.alibaba.cloud.ai.dataagent.service.datasource.DatasourceTableMetadataStore;
+import com.alibaba.cloud.ai.dataagent.service.datasource.DatasourceMetadataService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -80,6 +82,12 @@ public class SchemaServiceImpl implements SchemaService {
 	 * Vector storage service
 	 */
 	private final AgentVectorStoreService agentVectorStoreService;
+
+	/** Relational snapshot used by the datasource table browser. */
+	private final DatasourceTableMetadataStore datasourceTableMetadataStore;
+
+	/** JDBC metadata adapter used to fill table type information omitted by some connectors. */
+	private final DatasourceMetadataService datasourceMetadataService;
 
 	@Value("${spring.ai.alibaba.data-agent.embedding-recovery.schema-documents.sync-with-schema:false}")
 	private boolean syncSchemaDocuments;
@@ -164,6 +172,7 @@ public class SchemaServiceImpl implements SchemaService {
 				log.info("Processing {} tables in batch mode for datasource: {}", tables.size(), datasourceId);
 				tableMetadataService.batchEnrichTableMetadata(tables, config, foreignKeyMap);
 			}
+			enrichTableMetadataForSnapshot(datasourceId, tables);
 
 			log.info("Successfully processed all tables for datasource: {}", datasourceId);
 
@@ -175,10 +184,16 @@ public class SchemaServiceImpl implements SchemaService {
 			log.info("Storing {} columns and {} tables for datasource: {}", columnDocs.size(), tableDocs.size(),
 					datasourceId);
 
-            if (syncSchemaDocuments) {
-                log.info("Storing {} columns and {} tables for datasource: {}", datasourceId, columnDocs.size(), tableDocs.size());
-                replaceSchemaDocuments(datasourceId, columnDocs, tableDocs);
-            }
+			if (syncSchemaDocuments) {
+				log.info("Storing {} columns and {} tables for datasource: {}", datasourceId, columnDocs.size(),
+					tableDocs.size());
+				replaceSchemaDocuments(datasourceId, columnDocs, tableDocs);
+			}
+			// Persist only after document storage succeeds, keeping the UI snapshot aligned with
+			// the initialization result reported to the caller.
+			if (datasourceTableMetadataStore != null) {
+				datasourceTableMetadataStore.save(datasourceId, tables);
+			}
 			log.info("Successfully stored all documents for datasource: {}", datasourceId);
 			return true;
 		}
@@ -186,6 +201,43 @@ public class SchemaServiceImpl implements SchemaService {
 			log.error("Failed to process schema for datasource: {}", datasourceId, e);
 			return false;
 		}
+	}
+
+	/**
+	 * Fill connector omissions from JDBC metadata and keep a deterministic TABLE fallback
+	 * when a driver does not expose table types.
+	 */
+	private void enrichTableMetadataForSnapshot(Integer datasourceId, List<TableInfoBO> tables) {
+		Map<String, TableInfoBO> jdbcTables = new HashMap<>();
+		if (datasourceMetadataService != null) {
+			try {
+				for (TableInfoBO jdbcTable : datasourceMetadataService.getDatasourceTableDetails(datasourceId)) {
+					jdbcTables.putIfAbsent(tableKey(jdbcTable.getSchema(), jdbcTable.getName()), jdbcTable);
+					jdbcTables.putIfAbsent(tableKey("", jdbcTable.getName()), jdbcTable);
+				}
+			}
+			catch (Exception exception) {
+				log.debug("Unable to enrich initialized table types from JDBC metadata", exception);
+			}
+		}
+		for (TableInfoBO table : tables) {
+			TableInfoBO jdbcTable = jdbcTables.get(tableKey(table.getSchema(), table.getName()));
+			if (jdbcTable == null) {
+				jdbcTable = jdbcTables.get(tableKey("", table.getName()));
+			}
+			if (StringUtils.isBlank(table.getType())) {
+				table.setType(jdbcTable == null || StringUtils.isBlank(jdbcTable.getType()) ? "TABLE"
+						: jdbcTable.getType());
+			}
+			if (StringUtils.isBlank(table.getSchema()) && jdbcTable != null) {
+				table.setSchema(jdbcTable.getSchema());
+			}
+		}
+	}
+
+	private String tableKey(String schemaName, String tableName) {
+		return (schemaName == null ? "" : schemaName.trim().toLowerCase(Locale.ROOT)) + "."
+				+ (tableName == null ? "" : tableName.trim().toLowerCase(Locale.ROOT));
 	}
 
 	/**
