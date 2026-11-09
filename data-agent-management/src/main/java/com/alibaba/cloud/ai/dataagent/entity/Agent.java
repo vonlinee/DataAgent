@@ -48,9 +48,12 @@ public class Agent {
 	@Builder.Default
 	private Integer maxLoopCount = 10; // Maximum ReAct loop count for Agentic agents
 
-	// todo: 改为枚举
-	private String status; // Status: draft-pending publication, published-published,
-							// offline-offline
+	/**
+	 * Status: draft-pending publication, published-published, offline-offline
+	 *
+	 * @see com.alibaba.cloud.ai.dataagent.enums.AgentStatus
+	 */
+	private String status;
 
 	@JsonIgnore
 	private String apiKey; // API Key for external access, format sk-xxx

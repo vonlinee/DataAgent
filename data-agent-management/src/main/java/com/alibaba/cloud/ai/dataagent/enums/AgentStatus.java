@@ -21,6 +21,8 @@ import lombok.Getter;
 public enum AgentStatus {
 
     PUBLISHED("published"),
+    DRAFT("draft"),
+    OFFLINE("offline"),
     ;
 
     private final String status;

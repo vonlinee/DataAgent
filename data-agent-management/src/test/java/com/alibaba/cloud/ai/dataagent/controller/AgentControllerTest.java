@@ -49,7 +49,7 @@ class AgentControllerTest {
 	@Test
 	void createAgent_validRequest_returnsCreatedAgent() {
 		Agent input = Agent.builder().name("Test Agent").description("A test agent").build();
-		Agent saved = Agent.builder().id(1L).name("Test Agent").description("A test agent").status("draft").build();
+		Agent saved = Agent.builder().id(1L).name("Test Agent").description("A test agent").status(AgentStatus.DRAFT.getStatus()).build();
 		when(agentService.save(any(Agent.class))).thenReturn(saved);
 
 		Agent result = agentController.create(input);
@@ -57,7 +57,7 @@ class AgentControllerTest {
 		assertNotNull(result);
 		assertEquals(1L, result.getId());
 		assertEquals("Test Agent", result.getName());
-		assertEquals("draft", result.getStatus());
+		assertEquals(AgentStatus.DRAFT.getStatus(), result.getStatus());
 		verify(agentService).save(any(Agent.class));
 	}
 
@@ -91,7 +91,7 @@ class AgentControllerTest {
 
 	@Test
 	void publishAgent_validAgent_updatesStatusToPublished() {
-		Agent agent = Agent.builder().id(1L).name("Test Agent").status("draft").build();
+		Agent agent = Agent.builder().id(1L).name("Test Agent").status(AgentStatus.DRAFT.getStatus()).build();
 		when(agentService.findById(1L)).thenReturn(agent);
 		when(agentService.save(any(Agent.class))).thenAnswer(inv -> inv.getArgument(0));
 

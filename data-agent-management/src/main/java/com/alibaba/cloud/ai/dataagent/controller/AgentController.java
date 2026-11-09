@@ -75,7 +75,7 @@ public class AgentController {
 	public Agent create(@RequestBody Agent agent) {
 		// Set default status
 		if (StringUtils.isBlank(agent.getStatus())) {
-			agent.setStatus("draft");
+			agent.setStatus(AgentStatus.DRAFT.getStatus());
 		}
 		return agentService.save(agent);
 	}
@@ -107,7 +107,7 @@ public class AgentController {
 	@PostMapping("/{id}/offline")
 	public Agent offline(@PathVariable Long id) {
 		Agent agent = checkAgentExists(id);
-		agent.setStatus("offline");
+		agent.setStatus(AgentStatus.OFFLINE.getStatus());
 		return agentService.save(agent);
 	}
 
