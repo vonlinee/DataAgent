@@ -59,6 +59,8 @@ export interface SemanticModel {
 export interface SemanticModelAddDto {
   /** 智能体 ID */
   agentId: number;
+  /** 关联的数据源 ID */
+  datasourceId?: number;
   /** 表名 */
   tableName: string;
   /** 列名 */

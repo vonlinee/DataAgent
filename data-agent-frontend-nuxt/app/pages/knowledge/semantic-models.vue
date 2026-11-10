@@ -97,7 +97,17 @@
 				hover
 				:loading="loading"
 				show-select
+				class="semantic-model-table"
 			>
+				<!-- eslint-disable-next-line vue/valid-v-slot -->
+				<template #item.datasourceId="{ item }">
+					<span
+						class="datasource-cell text-truncate d-inline-block"
+						:title="datasourceLabel(item.datasourceId)"
+					>
+						{{ datasourceLabel(item.datasourceId) }}
+					</span>
+				</template>
 				<!-- eslint-disable-next-line vue/valid-v-slot -->
 				<template #item.status="{ item }">
 					<v-chip
@@ -147,10 +157,18 @@
 						<v-btn
 							size="small"
 							variant="text"
-							:color="item.status === 1 ? 'orange-darken-1' : 'success'"
-							:icon="item.status === 1 ? 'mdi-pause-circle' : 'mdi-play-circle'"
+							:color="item.status === 1 ? 'warning' : 'success'"
+							:aria-label="item.status === 1 ? '停用' : '启用'"
 							@click="toggleStatus(item, item.status === 1 ? 0 : 1)"
 						>
+							<v-icon
+								:icon="
+									item.status === 1
+										? 'mdi-power-off'
+										: 'mdi-power'
+								"
+								size="20"
+							/>
 							<v-tooltip activator="parent" location="top">{{
 								item.status === 1 ? '停用' : '启用'
 							}}</v-tooltip>
@@ -191,9 +209,9 @@
 			</v-data-table>
 		</v-card>
 
-		<v-dialog v-model="dialogVisible" max-width="760" persistent>
-			<v-card rounded="lg">
-				<v-card-title class="d-flex align-center pa-6 pb-4">
+		<v-dialog v-model="dialogVisible" max-width="920" persistent>
+			<v-card class="semantic-model-dialog rounded-lg" rounded="lg">
+				<v-card-title class="d-flex align-center pa-5 pb-4">
 					<v-icon
 						:icon="isEdit ? 'mdi-pencil-circle' : 'mdi-plus-circle'"
 						color="blue-darken-2"
@@ -213,40 +231,120 @@
 				</v-card-title>
 				<v-divider />
 
-				<v-card-text class="pa-6">
+				<v-card-text class="semantic-model-dialog__body pa-5 pt-4">
 					<v-form ref="formRef">
-						<v-row>
-							<v-col cols="12" md="6">
+						<v-row dense>
+							<v-col cols="12" md="6" class="pb-3">
+								<p
+									class="text-body-2 font-weight-medium text-grey-darken-2 mb-2"
+								>
+									数据源 <span class="text-error">*</span>
+								</p>
+								<v-autocomplete
+									v-model="modelForm.datasourceId"
+									:items="datasourceList"
+									item-title="name"
+									item-value="id"
+									placeholder="请选择数据源"
+									variant="outlined"
+									density="compact"
+									:loading="datasourceLoading"
+									:disabled="datasourceLoading"
+									clearable
+									:rules="[(v) => !!v || '数据源不能为空']"
+									hide-details="auto"
+									@update:model-value="handleDatasourceChange"
+								>
+									<template #item="{ props, item }">
+										<v-list-item
+											v-bind="props"
+											:title="item.raw.name || '未命名数据源'"
+											:subtitle="datasourceSubtitle(item.raw)"
+										/>
+									</template>
+								</v-autocomplete>
+							</v-col>
+							<v-col cols="12" md="6" class="pb-3">
 								<p
 									class="text-body-2 font-weight-medium text-grey-darken-2 mb-2"
 								>
 									表名 <span class="text-error">*</span>
 								</p>
-								<v-text-field
+								<v-autocomplete
 									v-model="modelForm.tableName"
-									placeholder="请输入表名"
+									:items="tableOptions"
+									item-title="name"
+									item-value="name"
+									placeholder="请选择表名"
 									variant="outlined"
 									density="compact"
+									:loading="tableLoading"
+									:disabled="!modelForm.datasourceId || tableLoading"
+									clearable
 									:rules="[(v) => !!v || '表名不能为空']"
 									hide-details="auto"
-								/>
+									@update:model-value="handleTableChange"
+								>
+									<template #item="{ props, item }">
+										<v-list-item
+											v-bind="props"
+											:title="item.raw.name"
+											:subtitle="item.raw.schema || '默认 schema'"
+										/>
+									</template>
+								</v-autocomplete>
 							</v-col>
-							<v-col cols="12" md="6">
+							<v-col cols="12" md="6" class="pb-3">
 								<p
 									class="text-body-2 font-weight-medium text-grey-darken-2 mb-2"
 								>
 									字段名 <span class="text-error">*</span>
 								</p>
-								<v-text-field
+								<v-autocomplete
 									v-model="modelForm.columnName"
-									placeholder="请输入数据库字段名"
+									:items="columnOptions"
+									item-title="name"
+									item-value="name"
+									placeholder="请选择字段名"
 									variant="outlined"
 									density="compact"
+									:loading="columnLoading"
+									:disabled="!modelForm.tableName || columnLoading"
+									clearable
 									:rules="[(v) => !!v || '字段名不能为空']"
+									hide-details="auto"
+									@update:model-value="handleColumnChange"
+								>
+									<template #item="{ props, item }">
+										<v-list-item
+											v-bind="props"
+											:title="item.raw.name"
+											:subtitle="item.raw.type || '未知类型'"
+										/>
+									</template>
+								</v-autocomplete>
+							</v-col>
+							<v-col cols="12" md="6" class="pb-3">
+								<p
+									class="text-body-2 font-weight-medium text-grey-darken-2 mb-2"
+								>
+									数据类型 <span class="text-error">*</span>
+								</p>
+								<v-autocomplete
+									v-model="modelForm.dataType"
+									:items="dataTypeOptions"
+									placeholder="请选择数据类型"
+									variant="outlined"
+									density="compact"
+									:disabled="
+										!modelForm.columnName || dataTypeOptions.length === 0
+									"
+									clearable
+									:rules="[(v) => !!v || '数据类型不能为空']"
 									hide-details="auto"
 								/>
 							</v-col>
-							<v-col cols="12" md="6">
+							<v-col cols="12" class="pb-3">
 								<p
 									class="text-body-2 font-weight-medium text-grey-darken-2 mb-2"
 								>
@@ -261,22 +359,7 @@
 									hide-details="auto"
 								/>
 							</v-col>
-							<v-col cols="12" md="6">
-								<p
-									class="text-body-2 font-weight-medium text-grey-darken-2 mb-2"
-								>
-									数据类型 <span class="text-error">*</span>
-								</p>
-								<v-text-field
-									v-model="modelForm.dataType"
-									placeholder="如：int, varchar(64)"
-									variant="outlined"
-									density="compact"
-									:rules="[(v) => !!v || '数据类型不能为空']"
-									hide-details="auto"
-								/>
-							</v-col>
-							<v-col cols="12">
+							<v-col cols="12" class="pb-3">
 								<p
 									class="text-body-2 font-weight-medium text-grey-darken-2 mb-2"
 								>
@@ -288,10 +371,11 @@
 									variant="outlined"
 									density="compact"
 									rows="2"
+									class="w-100"
 									hide-details="auto"
 								/>
 							</v-col>
-							<v-col cols="12">
+							<v-col cols="12" class="pb-3">
 								<p
 									class="text-body-2 font-weight-medium text-grey-darken-2 mb-2"
 								>
@@ -302,11 +386,12 @@
 									placeholder="描述该字段业务意义和口径"
 									variant="outlined"
 									density="compact"
-									rows="3"
+									rows="2"
+									class="w-100"
 									hide-details="auto"
 								/>
 							</v-col>
-							<v-col cols="12">
+							<v-col cols="12" class="pb-1">
 								<p
 									class="text-body-2 font-weight-medium text-grey-darken-2 mb-2"
 								>
@@ -318,6 +403,7 @@
 									variant="outlined"
 									density="compact"
 									rows="2"
+									class="w-100"
 									hide-details="auto"
 								/>
 							</v-col>
@@ -326,7 +412,7 @@
 				</v-card-text>
 
 				<v-divider />
-				<v-card-actions class="pa-4 d-flex justify-end ga-2">
+				<v-card-actions class="pa-4 pt-3 d-flex justify-end ga-2">
 					<v-btn variant="outlined" class="text-none px-6" @click="closeDialog"
 						>取消</v-btn
 					>
@@ -406,6 +492,11 @@ import semanticModelService, {
 	type SemanticModelAddDto,
 } from '~/services/semanticModel/index';
 import { useCrudPage } from '~/composables/useCrudPage/index';
+import datasourceService, {
+	type ColumnMetadata,
+	type Datasource,
+	type TableMetadata,
+} from '~/services/datasource/index';
 
 const DEFAULT_AGENT_ID = 0;
 const route = useRoute();
@@ -420,6 +511,13 @@ const batchImportDialogVisible = ref(false);
 const importFile = ref<File | null>(null);
 const selectedModelIds = ref<number[]>([]);
 const currentEditId = ref<number | null>(null);
+const datasourceList = ref<Datasource[]>([]);
+const datasourceLoading = ref(false);
+const tableLoading = ref(false);
+const columnLoading = ref(false);
+const tableOptions = ref<TableMetadata[]>([]);
+const columnOptions = ref<ColumnMetadata[]>([]);
+let metadataRequestId = 0;
 
 // ——— useCrudPage ———
 const searchKeyword = ref('');
@@ -457,21 +555,38 @@ const {
 	}),
 });
 
+const dataTypeOptions = computed(() => {
+	const selectedColumn = columnOptions.value.find(
+		(column) => column.name === modelForm.value.columnName,
+	);
+	return selectedColumn?.type ? [selectedColumn.type] : [];
+});
+
 function openCreateDialog() {
 	_openCreateDialog();
 	modelForm.value.agentId = agentId.value;
+	tableOptions.value = [];
+	columnOptions.value = [];
 }
 
 const headers = [
-	{ title: '表名', key: 'tableName', minWidth: '120px' },
-	{ title: '字段名', key: 'columnName', minWidth: '130px' },
-	{ title: '业务名称', key: 'businessName', minWidth: '140px' },
-	{ title: '同义词', key: 'synonyms', minWidth: '170px', sortable: false },
-	{ title: '数据类型', key: 'dataType', width: '110px' },
-	{ title: '状态', key: 'status', width: '100px', sortable: false },
-	{ title: '创建时间', key: 'createdTime', width: '180px' },
-	{ title: '操作', key: 'actions', width: '140px', sortable: false },
+	{ title: '数据源', key: 'datasourceId', width: 180, minWidth: '180px' },
+	{ title: '表名', key: 'tableName', width: 220, minWidth: '220px' },
+	{ title: '字段名', key: 'columnName', width: 180, minWidth: '180px' },
+	{ title: '业务名称', key: 'businessName', width: 180, minWidth: '180px' },
+	{ title: '同义词', key: 'synonyms', width: 200, minWidth: '200px', sortable: false },
+	{ title: '数据类型', key: 'dataType', width: 130, minWidth: '130px' },
+	{ title: '状态', key: 'status', width: 100, minWidth: '100px', sortable: false },
+	{ title: '创建时间', key: 'createdTime', width: 190, minWidth: '190px' },
+	{ title: '操作', key: 'actions', width: 140, minWidth: '140px', sortable: false },
 ];
+
+function datasourceLabel(datasourceId?: number) {
+	return (
+		datasourceList.value.find((datasource) => datasource.id === datasourceId)
+			?.name || '未关联数据源'
+	);
+}
 
 function formatDateTime(dateTime?: string) {
 	if (!dateTime) return '-';
@@ -493,6 +608,122 @@ function formatDateTime(dateTime?: string) {
 function editModel(model: SemanticModel) {
 	currentEditId.value = model.id || null;
 	openEditDialog(model);
+	void loadMetadataForModel(model);
+}
+
+function datasourceSubtitle(datasource: Datasource): string {
+	const endpoint = datasource.host
+		? `${datasource.host}${datasource.port ? `:${datasource.port}` : ''}`
+		: '';
+	return [datasource.type?.toUpperCase(), endpoint, datasource.databaseName]
+		.filter(Boolean)
+		.join(' · ');
+}
+
+async function loadDataSources() {
+	datasourceLoading.value = true;
+	try {
+		datasourceList.value = await datasourceService.getAllDatasource();
+	} catch {
+		datasourceList.value = [];
+		$tip('获取数据源列表失败', { color: 'error', icon: 'mdi-alert-circle' });
+	} finally {
+		datasourceLoading.value = false;
+	}
+}
+
+function clearColumnSelection() {
+	modelForm.value.columnName = '';
+	modelForm.value.dataType = '';
+	modelForm.value.columnComment = '';
+	columnOptions.value = [];
+	columnLoading.value = false;
+}
+
+function clearTableSelection() {
+	modelForm.value.tableName = '';
+	clearColumnSelection();
+}
+
+async function loadTablesForDatasource(datasourceId: number) {
+	const requestId = ++metadataRequestId;
+	tableLoading.value = true;
+	try {
+		const tables =
+			await datasourceService.getDatasourceTableDetails(datasourceId);
+		if (requestId === metadataRequestId) tableOptions.value = tables;
+	} catch {
+		if (requestId === metadataRequestId) {
+			tableOptions.value = [];
+			$tip('获取数据源表列表失败', {
+				color: 'error',
+				icon: 'mdi-alert-circle',
+			});
+		}
+	} finally {
+		if (requestId === metadataRequestId) tableLoading.value = false;
+	}
+}
+
+async function loadColumnsForTable(table: TableMetadata) {
+	const datasourceId = modelForm.value.datasourceId;
+	if (!datasourceId) return;
+	const requestId = ++metadataRequestId;
+	columnLoading.value = true;
+	try {
+		const columns = await datasourceService.getInitializedTableColumnDetails(
+			datasourceId,
+			table.name,
+			table.schema,
+		);
+		if (requestId === metadataRequestId) columnOptions.value = columns;
+	} catch {
+		if (requestId === metadataRequestId) {
+			columnOptions.value = [];
+			$tip('获取数据源字段列表失败', {
+				color: 'error',
+				icon: 'mdi-alert-circle',
+			});
+		}
+	} finally {
+		if (requestId === metadataRequestId) columnLoading.value = false;
+	}
+}
+
+function handleDatasourceChange(datasourceId: number | null) {
+	metadataRequestId++;
+	clearTableSelection();
+	tableOptions.value = [];
+	tableLoading.value = false;
+	if (datasourceId) void loadTablesForDatasource(datasourceId);
+}
+
+function handleTableChange(tableName: string | null) {
+	metadataRequestId++;
+	clearColumnSelection();
+	if (!tableName) return;
+	const table = tableOptions.value.find((item) => item.name === tableName);
+	if (table) void loadColumnsForTable(table);
+}
+
+function handleColumnChange(columnName: string | null) {
+	const column = columnOptions.value.find((item) => item.name === columnName);
+	modelForm.value.dataType = column?.type || '';
+	modelForm.value.columnComment = column?.description || '';
+}
+
+async function loadMetadataForModel(model: SemanticModel) {
+	if (!model.datasourceId) {
+		tableOptions.value = [];
+		columnOptions.value = [];
+		return;
+	}
+	await loadTablesForDatasource(model.datasourceId);
+	const table = tableOptions.value.find(
+		(item) => item.name === model.tableName,
+	);
+	if (!table) return;
+	await loadColumnsForTable(table);
 }
 
 function deleteModel(model: SemanticModel) {
@@ -564,6 +795,7 @@ function batchDeleteModels() {
 async function saveModel() {
 	const createData: SemanticModelAddDto = {
 		agentId: agentId.value,
+		datasourceId: modelForm.value.datasourceId,
 		tableName: modelForm.value.tableName,
 		columnName: modelForm.value.columnName,
 		businessName: modelForm.value.businessName,
@@ -631,7 +863,46 @@ function openBatchImportDialog() {
 	importFile.value = null;
 }
 
-onMounted(() => loadSemanticModels());
+onMounted(() => {
+	void loadDataSources();
+	void loadSemanticModels();
+});
 </script>
 
-<style scoped></style>
+<style scoped>
+.semantic-model-table :deep(.v-table__wrapper) {
+	overflow-x: auto;
+}
+
+.semantic-model-table :deep(table) {
+	min-width: 1500px;
+}
+
+.semantic-model-table :deep(.v-data-table__th),
+.semantic-model-table :deep(.v-data-table__th .v-data-table-header__content) {
+	white-space: nowrap;
+}
+
+.datasource-cell {
+	max-width: 160px;
+	vertical-align: middle;
+}
+
+.semantic-model-dialog {
+	max-height: min(90vh, 860px);
+	display: flex;
+	flex-direction: column;
+}
+
+.semantic-model-dialog__body {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-y: auto;
+}
+
+@media (max-width: 600px) {
+	.semantic-model-dialog {
+		max-height: 100dvh;
+	}
+}
+</style>

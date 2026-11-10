@@ -73,8 +73,9 @@ public class SemanticModelServiceImpl implements SemanticModelService {
 
 	@Override
 	public boolean addSemanticModel(SemanticModelAddDTO dto) {
-		// 根据agentId查询关联的datasourceId
-		Integer datasourceId = findDatasourceIdByAgentId(dto.getAgentId());
+		// 优先使用用户选择的数据源，兼容旧客户端时再回退到智能体当前数据源。
+		Integer datasourceId = dto.getDatasourceId() != null ? dto.getDatasourceId()
+				: findDatasourceIdByAgentId(dto.getAgentId());
 
 		// 转换DTO为Entity
 		SemanticModel semanticModel = SemanticModel.builder()

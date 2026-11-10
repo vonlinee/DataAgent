@@ -33,6 +33,9 @@ public class SemanticModelAddDTO {
 	@NotNull(message = "智能体ID不能为空")
 	private Long agentId;
 
+	/** 关联的数据源ID */
+	private Integer datasourceId;
+
 	/** 关联的表名 */
 	@NotBlank(message = "表名不能为空")
 	private String tableName;

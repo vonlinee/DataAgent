@@ -26,6 +26,7 @@ import com.alibaba.cloud.ai.dataagent.vo.BatchImportResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -110,6 +111,22 @@ class SemanticModelServiceImplTest {
 		boolean result = service.addSemanticModel(dto);
 		assertTrue(result);
 		verify(semanticModelMapper).insert(any(SemanticModel.class));
+	}
+
+	@Test
+	void addSemanticModel_dto_usesSelectedDatasource() {
+		SemanticModelAddDTO dto = new SemanticModelAddDTO();
+		dto.setAgentId(1L);
+		dto.setDatasourceId(9);
+		dto.setTableName("users");
+		dto.setColumnName("name");
+		dto.setBusinessName("User Name");
+
+		assertTrue(service.addSemanticModel(dto));
+		ArgumentCaptor<SemanticModel> captor = ArgumentCaptor.forClass(SemanticModel.class);
+		verify(semanticModelMapper).insert(captor.capture());
+		assertEquals(9, captor.getValue().getDatasourceId());
+		verifyNoInteractions(agentDatasourceMapper);
 	}
 
 	@Test
