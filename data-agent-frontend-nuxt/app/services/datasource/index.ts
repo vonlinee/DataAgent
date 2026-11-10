@@ -294,7 +294,7 @@ class DatasourceService {
 		}
 	}
 
-	/** Batch-save table and column comments to the connected business database. */
+	/** Batch-save table and column comments to the DataAgent metadata snapshot. */
 	async updateDatasourceComments(
 		datasourceId: number,
 		tables: DatasourceCommentTableChange[],

@@ -52,11 +52,9 @@ permissions and * limitations under the License. */
 
 		<v-card variant="flat" border class="rounded-lg">
 			<v-data-table
-				v-model:expanded="expandedRows"
 				:headers="headers"
 				:items="datasourceList"
 				item-value="id"
-				show-expand
 				hover
 				:loading="loading"
 				:items-per-page-options="[10, 25, 50, 100]"
@@ -65,38 +63,6 @@ permissions and * limitations under the License. */
 					'page-text': '{0}-{1} 共 {2} 条',
 				}"
 			>
-				<!-- eslint-disable-next-line vue/valid-v-slot -->
-				<template
-					#item.data-table-expand="{
-						item,
-						internalItem,
-						toggleExpand,
-						isExpanded,
-					}"
-				>
-					<v-btn
-						v-if="item.status === 'active' && item.testStatus === 'success'"
-						icon
-						variant="text"
-						size="small"
-						@click="toggleExpand(internalItem)"
-					>
-						<v-icon>{{
-							isExpanded(internalItem) ? 'mdi-chevron-up' : 'mdi-chevron-down'
-						}}</v-icon>
-					</v-btn>
-					<v-btn
-						v-else
-						icon
-						variant="text"
-						size="small"
-						disabled
-						class="expand-disabled"
-					>
-						<v-icon>mdi-chevron-down</v-icon>
-					</v-btn>
-				</template>
-
 				<!-- eslint-disable-next-line vue/valid-v-slot -->
 				<template #item.name="{ item }">
 					<div class="d-flex align-center py-2">
@@ -164,6 +130,15 @@ permissions and * limitations under the License. */
 				<template #item.actions="{ item }">
 					<div class="d-flex align-center justify-end ga-1">
 						<v-btn
+							variant="tonal"
+							size="small"
+							color="primary"
+							prepend-icon="mdi-table-cog"
+							@click="openMetadataDialog(item)"
+						>
+							数据表
+						</v-btn>
+						<v-btn
 							v-if="agentId"
 							variant="text"
 							size="small"
@@ -220,23 +195,6 @@ permissions and * limitations under the License. */
 						/>
 					</div>
 				</template>
-
-				<template #expanded-row="{ columns, item }">
-					<tr>
-						<td :colspan="columns.length" class="bg-grey-lighten-5 pa-0">
-							<ExpandedTableManager
-								v-model:selected-tables="selectedTables[item.id!]"
-								:all-tables="tableLists[item.id!] ?? []"
-								:datasource-id="item.id!"
-								:loading-tables="loadingTablesId === item.id"
-								:fetch-error="!!(item.id && tableFetchError[item.id])"
-								:updating="updatingTablesId === item.id"
-								@update-tables="(comments) => updateTables(item, comments)"
-								@retry="retryFetchTables(item)"
-							/>
-						</td>
-					</tr>
-				</template>
 			</v-data-table>
 		</v-card>
 
@@ -253,6 +211,19 @@ permissions and * limitations under the License. */
 			:datasource-id="fkDatasourceId"
 			:datasource-name="fkDatasourceName"
 		/>
+
+		<DatasourceMetadataDialog
+			v-model="metadataDialogVisible"
+			v-model:selected-tables="selectedTables[metadataDatasourceId]"
+			:datasource-id="metadataDatasourceId"
+			:datasource-name="metadataDatasourceName"
+			:tables="tableLists[metadataDatasourceId] ?? []"
+			:loading-tables="loadingTablesId === metadataDatasourceId"
+			:fetch-error="!!tableFetchError[metadataDatasourceId]"
+			:updating="updatingTablesId === metadataDatasourceId"
+			@update-tables="handleMetadataTablesUpdate"
+			@retry="retryFetchTables(metadataDatasource)"
+		/>
 	</section>
 </template>
 
@@ -265,7 +236,7 @@ import datasourceService, {
 import agentDatasourceService from '@/services/agentDatasource';
 import DatasourceFormDialog from './DatasourceFormDialog.vue';
 import ForeignKeyDialog from './ForeignKeyDialog.vue';
-import ExpandedTableManager from './ExpandedTableManager.vue';
+import DatasourceMetadataDialog from './DatasourceMetadataDialog.vue';
 
 const route = useRoute();
 const { showConfirm } = useConfirm();
@@ -277,7 +248,6 @@ const testingId = ref<number | null>(null);
 const togglingStatusId = ref<number | null>(null);
 const bindingDatasourceId = ref<number | null>(null);
 const datasourceList = ref<Datasource[]>([]);
-const expandedRows = ref<readonly string[]>([]);
 const tableLists = ref<Record<number, TableMetadata[]>>({});
 const selectedTables = ref<Record<number, string[]>>({});
 const loadingTablesId = ref<number | null>(null);
@@ -298,6 +268,13 @@ const formDialogTarget = ref<Datasource | null>(null);
 const fkDialogVisible = ref(false);
 const fkDatasourceId = ref(0);
 const fkDatasourceName = ref('');
+
+const metadataDialogVisible = ref(false);
+const metadataDatasource = ref<Datasource | null>(null);
+const metadataDatasourceId = computed(() => metadataDatasource.value?.id ?? 0);
+const metadataDatasourceName = computed(
+	() => metadataDatasource.value?.name ?? '',
+);
 
 const headers = [
 	{ title: '名称', key: 'name', align: 'start' as const },
@@ -477,89 +454,20 @@ function openFkDialog(item: Datasource) {
 	fkDialogVisible.value = true;
 }
 
-// ── 展开行相关 ──────────────────────────────────────────────────────────────
-
-function getDatasourceFromRow(row: unknown): Datasource | null {
-	if (row && typeof row === 'object' && 'id' in row) {
-		const id = (row as Datasource).id;
-		return (
-			datasourceList.value.find((ds) => ds.id === id) ?? (row as Datasource)
-		);
+function openMetadataDialog(item: Datasource) {
+	if (!item.id) return;
+	if (item.status !== 'active' || item.testStatus !== 'success') {
+		$tip('请先启用数据源并测试连接成功后再管理数据表', {
+			color: 'error',
+			icon: 'mdi-alert-circle',
+		});
+		return;
 	}
-	const id =
-		typeof row === 'number'
-			? row
-			: typeof row === 'string'
-				? Number(row)
-				: null;
-	if (id != null && !Number.isNaN(id))
-		return datasourceList.value.find((ds) => ds.id === id) ?? null;
-	return null;
+	metadataDatasource.value = item;
+	selectedTables.value[item.id] = selectedTables.value[item.id] ?? [];
+	metadataDialogVisible.value = true;
+	void fetchTablesForDatasource(item.id);
 }
-
-watch(
-	expandedRows,
-	(rows) => {
-		const list = Array.isArray(rows) ? rows : [];
-		const invalidRows: unknown[] = [];
-		for (const row of list) {
-			const ds = getDatasourceFromRow(row);
-			const canExpand =
-				ds && ds.status === 'active' && (ds.testStatus ?? '') === 'success';
-			if (!canExpand && ds) invalidRows.push(row);
-		}
-		if (invalidRows.length > 0) {
-			expandedRows.value = list.filter((row) => {
-				const ds = getDatasourceFromRow(row);
-				return (
-					ds && ds.status === 'active' && (ds.testStatus ?? '') === 'success'
-				);
-			});
-			const hasInactive = invalidRows.some((row) => {
-				const ds = getDatasourceFromRow(row);
-				return ds && ds.status !== 'active';
-			});
-			const hasConnFail = invalidRows.some((row) => {
-				const ds = getDatasourceFromRow(row);
-				return ds && (ds.testStatus ?? '') !== 'success';
-			});
-			if (hasInactive && hasConnFail)
-				$tip('请先启用数据源并测试连接成功后再展开', {
-					color: 'error',
-					icon: 'mdi-alert-circle',
-				});
-			else if (hasInactive)
-				$tip('请先启用数据源后再展开数据表管理', {
-					color: 'error',
-					icon: 'mdi-alert-circle',
-				});
-			else
-				$tip('请先测试连接成功后再展开数据表管理', {
-					color: 'error',
-					icon: 'mdi-alert-circle',
-				});
-		}
-	},
-	{ immediate: false },
-);
-
-watch(
-	expandedRows,
-	async (rows) => {
-		const list = Array.isArray(rows) ? rows : [];
-		for (const row of list) {
-			const dsId =
-				typeof row === 'object' && row !== null && 'id' in row && row.id != null
-					? row.id
-					: Number(row);
-			if (dsId && !tableLists.value[dsId]) {
-				selectedTables.value[dsId] = selectedTables.value[dsId] ?? [];
-				await fetchTablesForDatasource(dsId);
-			}
-		}
-	},
-	{ immediate: false },
-);
 
 async function fetchTablesForDatasource(datasourceId: number) {
 	loadingTablesId.value = datasourceId;
@@ -582,8 +490,13 @@ async function fetchTablesForDatasource(datasourceId: number) {
 	}
 }
 
-function retryFetchTables(item: Datasource) {
-	if (item.id) fetchTablesForDatasource(item.id);
+function retryFetchTables(item: Datasource | null) {
+	if (item?.id) void fetchTablesForDatasource(item.id);
+}
+
+function handleMetadataTablesUpdate(comments: DatasourceCommentTableChange[]) {
+	const datasource = metadataDatasource.value;
+	if (datasource) void updateTables(datasource, comments);
 }
 
 async function updateTables(
@@ -593,39 +506,43 @@ async function updateTables(
 	if (!item.id) return;
 	updatingTablesId.value = item.id;
 	try {
-		const res = await agentDatasourceService.updateDatasourceTables(
-			agentId.value || '',
-			{
-				datasourceId: item.id,
-				tables: selectedTables.value[item.id] ?? [],
-			},
-		);
-		if (res.success) {
-			if (comments.length > 0) {
-				const commentRes = await datasourceService.updateDatasourceComments(
-					item.id,
-					comments,
-				);
-				if (!commentRes.success) {
-					$tip(commentRes.message || '数据库注释更新失败', {
-						color: 'error',
-						icon: 'mdi-alert-circle',
-					});
-					return;
-				}
-			}
-			await fetchTablesForDatasource(item.id);
-			$tip(
-				comments.length > 0
-					? `已更新 ${comments.length} 个表的注释`
-					: `已保存 ${selectedTables.value[item.id]?.length ?? 0} 个表`,
+		if (agentId.value) {
+			const res = await agentDatasourceService.updateDatasourceTables(
+				agentId.value,
+				{
+					datasourceId: item.id,
+					tables: selectedTables.value[item.id] ?? [],
+				},
 			);
-		} else {
-			$tip(res.message || '更新失败', {
-				color: 'error',
-				icon: 'mdi-alert-circle',
-			});
+			if (!res.success) {
+				$tip(res.message || '更新失败', {
+					color: 'error',
+					icon: 'mdi-alert-circle',
+				});
+				return;
+			}
 		}
+
+		if (comments.length > 0) {
+			const commentRes = await datasourceService.updateDatasourceComments(
+				item.id,
+				comments,
+			);
+			if (!commentRes.success) {
+				$tip(commentRes.message || '数据源元数据注释更新失败', {
+					color: 'error',
+					icon: 'mdi-alert-circle',
+				});
+				return;
+			}
+		}
+
+		await fetchTablesForDatasource(item.id);
+		$tip(
+			comments.length > 0
+				? `已更新 ${comments.length} 个表的注释`
+				: `已保存 ${selectedTables.value[item.id]?.length ?? 0} 个表`,
+		);
 	} catch (error: unknown) {
 		$tip(error instanceof Error ? error.message : '更新数据库失败', {
 			color: 'error',

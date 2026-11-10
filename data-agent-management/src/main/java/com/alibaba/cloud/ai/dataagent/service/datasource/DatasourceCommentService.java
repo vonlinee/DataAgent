@@ -11,7 +11,7 @@ package com.alibaba.cloud.ai.dataagent.service.datasource;
 
 import com.alibaba.cloud.ai.dataagent.dto.datasource.UpdateDatasourceCommentsDTO;
 
-/** Applies table and column comments to the connected business database. */
+/** Updates table and column comments in the DataAgent datasource metadata snapshot. */
 public interface DatasourceCommentService {
 
 	void updateComments(Integer datasourceId, UpdateDatasourceCommentsDTO request) throws Exception;

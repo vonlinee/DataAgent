@@ -64,7 +64,10 @@ public class DatasourceController {
 
 	private final DatasourceCommentService datasourceCommentService;
 
-	/** Keep the legacy constructor available for existing controller tests and integrations. */
+	/**
+	 * Keep the legacy constructor available for existing controller tests and
+	 * integrations.
+	 */
 	public DatasourceController(DatasourceService datasourceService) {
 		this(datasourceService, null, null);
 	}
@@ -159,7 +162,8 @@ public class DatasourceController {
 	}
 
 	/**
-	 * Return table details with comments/types captured by the last Schema initialization.
+	 * Return table details with comments/types captured by the last Schema
+	 * initialization.
 	 */
 	@GetMapping("/{id}/tables/initialized-details")
 	public List<TableInfoBO> getInitializedDatasourceTableDetails(@PathVariable Integer id) {
@@ -262,8 +266,7 @@ public class DatasourceController {
 
 	@GetMapping("/{id}/tables/{tableName}/columns/details")
 	public ApiResponse<List<ColumnInfoBO>> getTableColumnDetails(@PathVariable Integer id,
-			@PathVariable String tableName,
-			@RequestParam(value = "schema", required = false) String schemaName) {
+			@PathVariable String tableName, @RequestParam(value = "schema", required = false) String schemaName) {
 		try {
 			List<ColumnInfoBO> columns = datasourceMetadataService.getTableColumnDetails(id, tableName, schemaName);
 			return ApiResponse.success("获取字段详情成功", columns);
@@ -273,15 +276,17 @@ public class DatasourceController {
 		}
 	}
 
-	/** Return the column snapshot captured by Schema initialization without touching the business database. */
+	/**
+	 * Return the column snapshot captured by Schema initialization without touching the
+	 * business database.
+	 */
 	@GetMapping("/{id}/tables/{tableName}/columns/initialized-details")
 	public ApiResponse<List<ColumnInfoBO>> getInitializedTableColumnDetails(@PathVariable Integer id,
-			@PathVariable String tableName,
-			@RequestParam(value = "schema", required = false) String schemaName) {
+			@PathVariable String tableName, @RequestParam(value = "schema", required = false) String schemaName) {
 		try {
 			checkDatasourceExists(id);
 			List<ColumnInfoBO> columns = datasourceMetadataService.getInitializedTableColumnDetails(id, tableName,
-				schemaName);
+					schemaName);
 			return ApiResponse.success("获取初始化字段详情成功", columns);
 		}
 		catch (Exception e) {
@@ -289,21 +294,23 @@ public class DatasourceController {
 		}
 	}
 
-	/** Apply table and column comments to the business database in one batch. */
+	/**
+	 * Update table and column comments in the DataAgent metadata snapshot in one batch.
+	 */
 	@PutMapping("/{id}/comments")
 	public ApiResponse<Void> updateComments(@PathVariable Integer id,
 			@Valid @RequestBody UpdateDatasourceCommentsDTO request) {
 		checkDatasourceExists(id);
 		try {
 			datasourceCommentService.updateComments(id, request);
-			return ApiResponse.success("数据库注释更新成功");
+			return ApiResponse.success("数据源元数据注释更新成功");
 		}
 		catch (UnsupportedOperationException exception) {
 			throw new InvalidInputException(exception.getMessage());
 		}
 		catch (Exception exception) {
 			log.error("Failed to update comments for datasource: {}", id, exception);
-			throw new InternalServerException("数据库注释更新失败：" + exception.getMessage());
+			throw new InternalServerException("数据源元数据注释更新失败：" + exception.getMessage());
 		}
 	}
 

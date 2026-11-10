@@ -45,8 +45,8 @@ public interface AgentDatasourceTablesMapper {
 	List<String> getSelectedTablesByDatasourceId(@Param("datasourceId") int datasourceId);
 
 	/**
-	 * Read table comments and types captured by Schema initialization. The same
-	 * metadata is copied to every agent relation that selected this table.
+	 * Read table comments and types captured by Schema initialization. The same metadata
+	 * is copied to every agent relation that selected this table.
 	 */
 	@Select("""
 			SELECT adt.table_name AS name, adt.schema_name AS `schema`,
@@ -67,6 +67,16 @@ public interface AgentDatasourceTablesMapper {
 	int updateTableMetadataByDatasourceId(@Param("datasourceId") Integer datasourceId,
 			@Param("tableName") String tableName, @Param("schemaName") String schemaName,
 			@Param("tableComment") String tableComment, @Param("tableType") String tableType);
+
+	/** Update one user-maintained table comment for all agent relations sharing a table. */
+	@Update("""
+			UPDATE agent_datasource_tables
+			SET table_comment = #{tableComment}, update_time = NOW()
+			WHERE table_name = #{tableName}
+			  AND agent_datasource_id IN (SELECT id FROM agent_datasource WHERE datasource_id = #{datasourceId})
+			""")
+	int updateTableCommentByDatasourceId(@Param("datasourceId") Integer datasourceId,
+			@Param("tableName") String tableName, @Param("tableComment") String tableComment);
 
 	// 删除当前列表中不存在的表
 	@Delete("<script>" + "DELETE FROM agent_datasource_tables WHERE agent_datasource_id = #{agentDatasourceId}"

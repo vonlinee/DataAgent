@@ -25,12 +25,16 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
 import org.apache.ibatis.annotations.Results;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 /** Mapper for the datasource-scoped column metadata snapshot. */
 @Mapper
 public interface DatasourceTableColumnMapper {
 
-	/** Delete all column snapshots for a datasource before replacing its initialization result. */
+	/**
+	 * Delete all column snapshots for a datasource before replacing its initialization
+	 * result.
+	 */
 	@Delete("DELETE FROM datasource_table_columns WHERE datasource_id = #{datasourceId}")
 	int deleteByDatasource(@Param("datasourceId") Integer datasourceId);
 
@@ -46,15 +50,11 @@ public interface DatasourceTableColumnMapper {
 			@Param("column") ColumnInfoBO column, @Param("ordinalPosition") Integer ordinalPosition);
 
 	/** Read cached columns in the same order reported by the source database. */
-	@Results({
-			@Result(property = "name", column = "column_name"),
+	@Results({ @Result(property = "name", column = "column_name"),
 			@Result(property = "tableName", column = "table_name"),
 			@Result(property = "description", column = "column_comment"),
-			@Result(property = "type", column = "data_type"),
-			@Result(property = "primary", column = "is_primary"),
-			@Result(property = "notnull", column = "is_notnull"),
-			@Result(property = "samples", column = "samples")
-	})
+			@Result(property = "type", column = "data_type"), @Result(property = "primary", column = "is_primary"),
+			@Result(property = "notnull", column = "is_notnull"), @Result(property = "samples", column = "samples") })
 	@Select("""
 			SELECT column_name, table_name, column_comment, data_type, is_primary, is_notnull, samples
 			FROM datasource_table_columns
@@ -64,5 +64,18 @@ public interface DatasourceTableColumnMapper {
 			""")
 	List<ColumnInfoBO> findByDatasourceAndTable(@Param("datasourceId") Integer datasourceId,
 			@Param("tableName") String tableName, @Param("schemaName") String schemaName);
+
+	/** Update one user-maintained column comment in the datasource snapshot. */
+	@Update("""
+			UPDATE datasource_table_columns
+			SET column_comment = #{columnComment}, update_time = NOW()
+			WHERE datasource_id = #{datasourceId}
+			  AND schema_name = #{schemaName}
+			  AND table_name = #{tableName}
+			  AND column_name = #{columnName}
+			""")
+	int updateColumnComment(@Param("datasourceId") Integer datasourceId, @Param("schemaName") String schemaName,
+			@Param("tableName") String tableName, @Param("columnName") String columnName,
+			@Param("columnComment") String columnComment);
 
 }
