@@ -17,6 +17,7 @@ package com.alibaba.cloud.ai.dataagent.controller;
 
 import com.alibaba.cloud.ai.dataagent.dto.schema.SemanticModelAddDTO;
 import com.alibaba.cloud.ai.dataagent.dto.schema.SemanticModelBatchImportDTO;
+import com.alibaba.cloud.ai.dataagent.dto.schema.SemanticModelQueryReq;
 import com.alibaba.cloud.ai.dataagent.entity.SemanticModel;
 import com.alibaba.cloud.ai.dataagent.service.semantic.SemanticModelService;
 import com.alibaba.cloud.ai.dataagent.vo.ApiResponse;
@@ -58,19 +59,41 @@ public class SemanticModelController {
 	private final SemanticModelService semanticModelService;
 
 	@GetMapping
-	public ApiResponse<List<SemanticModel>> list(@RequestParam(value = "keyword", required = false) String keyword,
-			@RequestParam(value = "agentId", required = false) Long agentId) {
+	public ApiResponse<List<SemanticModel>> list(@ModelAttribute SemanticModelQueryReq query) {
+		return listInternal(query);
+	}
+
+	/**
+	 * Compatibility overload used by existing callers that only provide the legacy parameters.
+	 */
+	public ApiResponse<List<SemanticModel>> list(String keyword, Long agentId) {
+		SemanticModelQueryReq query = new SemanticModelQueryReq();
+		query.setKeyword(keyword);
+		query.setAgentId(agentId);
+		return listInternal(query);
+	}
+
+	private ApiResponse<List<SemanticModel>> listInternal(SemanticModelQueryReq query) {
+		boolean hasAdvancedFilters = query.getDatasourceId() != null || hasText(query.getTableName())
+				|| hasText(query.getColumnName()) || hasText(query.getBusinessName()) || hasText(query.getSynonyms())
+				|| query.getCreatedTimeStart() != null || query.getCreatedTimeEnd() != null
+				|| query.getUpdatedTimeStart() != null || query.getUpdatedTimeEnd() != null;
+		if (hasAdvancedFilters) {
+			return ApiResponse.success("success list semanticModel", semanticModelService.query(query));
+		}
 		List<SemanticModel> result;
-		if (keyword != null && !keyword.trim().isEmpty()) {
-			result = semanticModelService.search(keyword);
-		}
-		else if (agentId != null) {
-			result = semanticModelService.getByAgentId(agentId);
-		}
-		else {
+		if (hasText(query.getKeyword())) {
+			result = semanticModelService.search(query.getKeyword());
+		} else if (query.getAgentId() != null) {
+			result = semanticModelService.getByAgentId(query.getAgentId());
+		} else {
 			result = semanticModelService.getAll();
 		}
 		return ApiResponse.success("success list semanticModel", result);
+	}
+
+	private boolean hasText(String value) {
+		return value != null && !value.trim().isEmpty();
 	}
 
 	@GetMapping("/{id}")

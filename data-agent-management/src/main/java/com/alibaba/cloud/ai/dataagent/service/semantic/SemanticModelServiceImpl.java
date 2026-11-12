@@ -18,6 +18,7 @@ package com.alibaba.cloud.ai.dataagent.service.semantic;
 import com.alibaba.cloud.ai.dataagent.dto.schema.SemanticModelAddDTO;
 import com.alibaba.cloud.ai.dataagent.dto.schema.SemanticModelBatchImportDTO;
 import com.alibaba.cloud.ai.dataagent.dto.schema.SemanticModelImportItem;
+import com.alibaba.cloud.ai.dataagent.dto.schema.SemanticModelQueryReq;
 import com.alibaba.cloud.ai.dataagent.entity.AgentDatasource;
 import com.alibaba.cloud.ai.dataagent.entity.SemanticModel;
 import com.alibaba.cloud.ai.dataagent.mapper.AgentDatasourceMapper;
@@ -43,6 +44,11 @@ public class SemanticModelServiceImpl implements SemanticModelService {
 	@Override
 	public List<SemanticModel> getAll() {
 		return semanticModelMapper.selectAll();
+	}
+
+	@Override
+	public List<SemanticModel> query(SemanticModelQueryReq query) {
+		return semanticModelMapper.selectByQuery(query);
 	}
 
 	@Override

@@ -16,6 +16,7 @@
 package com.alibaba.cloud.ai.dataagent.mapper;
 
 import com.alibaba.cloud.ai.dataagent.entity.SemanticModel;
+import com.alibaba.cloud.ai.dataagent.dto.schema.SemanticModelQueryReq;
 import org.apache.ibatis.annotations.*;
 
 import java.util.List;
@@ -23,12 +24,51 @@ import java.util.List;
 @Mapper
 public interface SemanticModelMapper {
 
+	/**
+	 * Query semantic models by the optional list filters.
+	 */
+	@Results(id = "semanticModelResultMap", value = {
+		@Result(property = "updateTime", column = "updated_time")
+	})
+	@Select("""
+			<script>
+			SELECT * FROM semantic_model
+			<where>
+				<if test="query.agentId != null">AND agent_id = #{query.agentId}</if>
+				<if test="query.datasourceId != null">AND datasource_id = #{query.datasourceId}</if>
+				<if test="query.keyword != null and query.keyword != ''">
+					AND (table_name LIKE CONCAT('%', #{query.keyword}, '%')
+						OR column_name LIKE CONCAT('%', #{query.keyword}, '%')
+						OR business_name LIKE CONCAT('%', #{query.keyword}, '%')
+						OR business_description LIKE CONCAT('%', #{query.keyword}, '%')
+						OR synonyms LIKE CONCAT('%', #{query.keyword}, '%'))
+				</if>
+				<if test="query.tableName != null and query.tableName != ''">AND table_name = #{query.tableName}</if>
+				<if test="query.columnName != null and query.columnName != ''">AND column_name = #{query.columnName}</if>
+				<if test="query.businessName != null and query.businessName != ''">
+					AND business_name LIKE CONCAT('%', #{query.businessName}, '%')
+				</if>
+				<if test="query.synonyms != null and query.synonyms != ''">
+					AND synonyms LIKE CONCAT('%', #{query.synonyms}, '%')
+				</if>
+				<if test="query.createdTimeStart != null">AND created_time &gt;= #{query.createdTimeStart}</if>
+				<if test="query.createdTimeEnd != null">AND created_time &lt;= #{query.createdTimeEnd}</if>
+				<if test="query.updatedTimeStart != null">AND updated_time &gt;= #{query.updatedTimeStart}</if>
+				<if test="query.updatedTimeEnd != null">AND updated_time &lt;= #{query.updatedTimeEnd}</if>
+			</where>
+			ORDER BY updated_time DESC, created_time DESC
+			</script>
+			""")
+	List<SemanticModel> selectByQuery(@Param("query") SemanticModelQueryReq query);
+
+	@ResultMap("semanticModelResultMap")
 	@Select("SELECT * FROM semantic_model ORDER BY created_time DESC")
 	List<SemanticModel> selectAll();
 
 	/**
 	 * Query semantic model list by agent ID
 	 */
+	@ResultMap("semanticModelResultMap")
 	@Select("""
 			SELECT * FROM semantic_model
 			WHERE agent_id = #{agentId}
@@ -39,6 +79,7 @@ public interface SemanticModelMapper {
 	/**
 	 * Query by id
 	 */
+	@ResultMap("semanticModelResultMap")
 	@Select("""
 			SELECT * FROM semantic_model
 			WHERE id = #{id}
@@ -48,6 +89,7 @@ public interface SemanticModelMapper {
 	/**
 	 * Search semantic models by keyword
 	 */
+	@ResultMap("semanticModelResultMap")
 	@Select("""
 			SELECT * FROM semantic_model
 			WHERE column_name LIKE CONCAT('%', #{keyword}, '%')
@@ -81,6 +123,7 @@ public interface SemanticModelMapper {
 	/**
 	 * Query semantic models by agent ID and enabled status
 	 */
+	@ResultMap("semanticModelResultMap")
 	@Select("""
 			SELECT * FROM semantic_model
 			WHERE agent_id = #{agentId}
@@ -128,6 +171,7 @@ public interface SemanticModelMapper {
 	/**
 	 * Query semantic models by datasource ID, status and table names
 	 */
+	@ResultMap("semanticModelResultMap")
 	@Select("""
 			<script>
 			SELECT * FROM semantic_model
@@ -146,6 +190,7 @@ public interface SemanticModelMapper {
 	/**
 	 * Query semantic model based on agentId, tableName, and columnName
 	 */
+	@ResultMap("semanticModelResultMap")
 	@Select("""
 			SELECT * FROM semantic_model
 			WHERE agent_id = #{agentId}

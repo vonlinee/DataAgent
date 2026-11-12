@@ -53,6 +53,31 @@ export interface SemanticModel {
 }
 ```
 
+### `SemanticModelQuery`
+**描述**: 语义模型列表查询条件。数据源、表名和字段名支持精确筛选，业务名称和同义词支持模糊筛选，时间条件为闭区间。
+```typescript
+export interface SemanticModelQuery {
+  /** 关联的数据源 ID，精确筛选 */
+  datasourceId?: number;
+  /** 数据库表名，精确筛选 */
+  tableName?: string;
+  /** 数据库列名，精确筛选 */
+  columnName?: string;
+  /** 业务名称，模糊筛选 */
+  businessName?: string;
+  /** 同义词，模糊筛选 */
+  synonyms?: string;
+  /** 创建时间起点，包含该时刻 */
+  createdTimeStart?: string;
+  /** 创建时间终点，包含该时刻 */
+  createdTimeEnd?: string;
+  /** 更新时间起点，包含该时刻 */
+  updatedTimeStart?: string;
+  /** 更新时间终点，包含该时刻 */
+  updatedTimeEnd?: string;
+}
+```
+
 ### `SemanticModelAddDto`
 **描述**: 创建语义模型的 DTO
 ```typescript

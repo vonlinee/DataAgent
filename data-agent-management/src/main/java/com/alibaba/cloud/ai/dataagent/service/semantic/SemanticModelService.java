@@ -17,6 +17,7 @@ package com.alibaba.cloud.ai.dataagent.service.semantic;
 
 import com.alibaba.cloud.ai.dataagent.dto.schema.SemanticModelAddDTO;
 import com.alibaba.cloud.ai.dataagent.dto.schema.SemanticModelBatchImportDTO;
+import com.alibaba.cloud.ai.dataagent.dto.schema.SemanticModelQueryReq;
 import com.alibaba.cloud.ai.dataagent.entity.SemanticModel;
 import com.alibaba.cloud.ai.dataagent.vo.BatchImportResult;
 
@@ -26,6 +27,8 @@ import java.util.List;
 public interface SemanticModelService {
 
 	List<SemanticModel> getAll();
+
+	List<SemanticModel> query(SemanticModelQueryReq query);
 
 	List<SemanticModel> getEnabledByAgentId(Long agentId);
 

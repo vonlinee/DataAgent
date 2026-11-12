@@ -22,16 +22,6 @@
 		>
 			<template #actions>
 				<v-btn
-					class="text-none bg-white"
-					style="border-color: #e2e8f0"
-					variant="outlined"
-					prepend-icon="mdi-refresh"
-					:loading="loading"
-					@click="loadSemanticModels"
-				>
-					刷新
-				</v-btn>
-				<v-btn
 					color="blue-darken-1"
 					prepend-icon="mdi-upload"
 					class="text-none px-6"
@@ -53,39 +43,203 @@
 		</KnowledgePageHeader>
 
 		<v-card variant="flat" border class="rounded-lg mb-4 pa-4">
-			<div class="d-flex flex-wrap ga-3 align-center">
-				<v-text-field
-					v-model="searchKeyword"
-					placeholder="请输入关键词搜索表名、字段名、业务名"
-					prepend-inner-icon="mdi-magnify"
-					variant="outlined"
-					density="compact"
-					clearable
-					hide-details
-					class="search-field"
-					style="max-width: 420px"
-					@keyup.enter="loadSemanticModels"
-					@click:clear="loadSemanticModels"
-				/>
-				<v-btn
-					v-if="selectedModelIds.length > 0"
-					variant="tonal"
-					color="red-darken-1"
-					prepend-icon="mdi-delete"
-					class="text-none"
-					@click="batchDeleteModels"
-				>
-					批量删除 ({{ selectedModelIds.length }})
-				</v-btn>
-				<v-spacer />
-				<v-chip
-					color="blue-lighten-5"
-					variant="flat"
-					class="font-weight-medium"
-				>
-					总数 {{ semanticModelList.length }}
-				</v-chip>
-			</div>
+			<v-row dense align="center">
+				<v-col cols="12" sm="6" lg="3">
+					<v-autocomplete
+						v-model="queryForm.datasourceId"
+						:items="datasourceList"
+						item-title="name"
+						item-value="id"
+						label="数据源"
+						placeholder="全部数据源"
+						variant="outlined"
+						density="compact"
+						clearable
+						hide-details
+					/>
+				</v-col>
+				<v-col cols="12" sm="6" lg="3">
+					<v-autocomplete
+						v-model="queryForm.tableName"
+						:items="filterTableOptions"
+						item-title="name"
+						item-value="name"
+						label="表名"
+						placeholder="全部表名"
+						variant="outlined"
+						density="compact"
+						:loading="filterMetadataLoading"
+						clearable
+						hide-details
+						no-data-text="暂无匹配的表名"
+					>
+						<template #item="{ props, item }">
+							<v-list-item
+								v-bind="props"
+								:title="item.raw.name"
+								:subtitle="item.raw.datasourceName"
+							/>
+						</template>
+					</v-autocomplete>
+				</v-col>
+				<v-col cols="12" sm="6" lg="3">
+					<v-autocomplete
+						v-model="queryForm.columnName"
+						:items="filterColumnOptions"
+						item-title="name"
+						item-value="name"
+						label="字段名"
+						placeholder="全部字段"
+						variant="outlined"
+						density="compact"
+						:loading="filterMetadataLoading"
+						clearable
+						hide-details
+						no-data-text="暂无匹配的字段"
+					>
+						<template #item="{ props, item }">
+							<v-list-item
+								v-bind="props"
+								:title="item.raw.name"
+								:subtitle="
+									[item.raw.datasourceName, item.raw.tableName]
+										.filter(Boolean)
+										.join(' · ')
+								"
+							/>
+						</template>
+					</v-autocomplete>
+				</v-col>
+				<v-col cols="12" sm="6" lg="3">
+					<v-text-field
+						v-model="queryForm.businessName"
+						label="业务名称"
+						placeholder="模糊搜索"
+						prepend-inner-icon="mdi-magnify"
+						variant="outlined"
+						density="compact"
+						clearable
+						hide-details
+						@keyup.enter="loadSemanticModels"
+					/>
+				</v-col>
+				<v-col cols="12" sm="6" lg="3">
+					<v-text-field
+						v-model="queryForm.synonyms"
+						label="同义词"
+						placeholder="模糊搜索"
+						variant="outlined"
+						density="compact"
+						clearable
+						hide-details
+						@keyup.enter="loadSemanticModels"
+					/>
+				</v-col>
+				<v-col cols="12" sm="6" lg="3">
+					<v-menu
+						v-model="createdDateMenu"
+						:close-on-content-click="false"
+						location="bottom start"
+						min-width="328"
+					>
+						<template #activator="{ props }">
+							<v-text-field
+								v-bind="props"
+								:model-value="
+									formatDateRange(
+										queryForm.createdTimeStart,
+										queryForm.createdTimeEnd,
+									)
+								"
+								label="创建时间范围"
+								placeholder="选择日期范围"
+								prepend-inner-icon="mdi-calendar-range"
+								variant="outlined"
+								density="compact"
+								clearable
+								readonly
+								hide-details
+								@click:clear="clearCreatedDateRange"
+							/>
+						</template>
+						<v-date-picker
+							v-model="createdDateRange"
+							multiple="range"
+							color="blue-darken-2"
+							show-adjacent-months
+							hide-header
+							@update:model-value="closeDateRangeMenu($event, 'created')"
+						/>
+					</v-menu>
+				</v-col>
+				<v-col cols="12" sm="6" lg="3">
+					<v-menu
+						v-model="updatedDateMenu"
+						:close-on-content-click="false"
+						location="bottom start"
+						min-width="328"
+					>
+						<template #activator="{ props }">
+							<v-text-field
+								v-bind="props"
+								:model-value="
+									formatDateRange(
+										queryForm.updatedTimeStart,
+										queryForm.updatedTimeEnd,
+									)
+								"
+								label="更新时间范围"
+								placeholder="选择日期范围"
+								prepend-inner-icon="mdi-calendar-range"
+								variant="outlined"
+								density="compact"
+								clearable
+								readonly
+								hide-details
+								@click:clear="clearUpdatedDateRange"
+							/>
+						</template>
+						<v-date-picker
+							v-model="updatedDateRange"
+							multiple="range"
+							color="blue-darken-2"
+							show-adjacent-months
+							hide-header
+							@update:model-value="closeDateRangeMenu($event, 'updated')"
+						/>
+					</v-menu>
+				</v-col>
+				<v-col cols="12" class="d-flex flex-wrap align-center ga-2 pt-1">
+					<v-btn
+						v-if="selectedModelIds.length > 0"
+						variant="tonal"
+						color="red-darken-1"
+						prepend-icon="mdi-delete"
+						class="text-none"
+						@click="batchDeleteModels"
+					>
+						批量删除 ({{ selectedModelIds.length }})
+					</v-btn>
+					<v-spacer />
+					<v-btn
+						color="blue-darken-3"
+						prepend-icon="mdi-magnify"
+						class="text-none"
+						elevation="0"
+						@click="loadSemanticModels"
+					>
+						查询
+					</v-btn>
+					<v-btn
+						variant="text"
+						prepend-icon="mdi-filter-off-outline"
+						class="text-none"
+						@click="resetQuery"
+					>
+						重置
+					</v-btn>
+				</v-col>
+			</v-row>
 		</v-card>
 
 		<v-card variant="flat" border class="rounded-lg">
@@ -141,7 +295,12 @@
 
 				<!-- eslint-disable-next-line vue/valid-v-slot -->
 				<template #item.createdTime="{ item }">
-					{{ formatDateTime(item.createdTime || item.updateTime) }}
+					{{ formatDateTime(item.createdTime) }}
+				</template>
+
+				<!-- eslint-disable-next-line vue/valid-v-slot -->
+				<template #item.updateTime="{ item }">
+					{{ formatDateTime(item.updateTime) }}
 				</template>
 
 				<!-- eslint-disable-next-line vue/valid-v-slot -->
@@ -162,11 +321,7 @@
 							@click="toggleStatus(item, item.status === 1 ? 0 : 1)"
 						>
 							<v-icon
-								:icon="
-									item.status === 1
-										? 'mdi-power-off'
-										: 'mdi-power'
-								"
+								:icon="item.status === 1 ? 'mdi-power-off' : 'mdi-power'"
 								size="20"
 							/>
 							<v-tooltip activator="parent" location="top">{{
@@ -204,6 +359,19 @@
 						>
 							添加语义模型
 						</v-btn>
+					</div>
+				</template>
+
+				<template #bottom>
+					<div class="semantic-model-table__footer">
+						<v-chip
+							color="blue-lighten-5"
+							variant="flat"
+							class="font-weight-medium"
+						>
+							总数 {{ semanticModelList.length }}
+						</v-chip>
+						<v-data-table-footer />
 					</div>
 				</template>
 			</v-data-table>
@@ -490,6 +658,7 @@
 import semanticModelService, {
 	type SemanticModel,
 	type SemanticModelAddDto,
+	type SemanticModelQuery,
 } from '~/services/semanticModel/index';
 import { useCrudPage } from '~/composables/useCrudPage/index';
 import datasourceService, {
@@ -511,16 +680,124 @@ const batchImportDialogVisible = ref(false);
 const importFile = ref<File | null>(null);
 const selectedModelIds = ref<number[]>([]);
 const currentEditId = ref<number | null>(null);
+const createdDateMenu = ref(false);
+const updatedDateMenu = ref(false);
 const datasourceList = ref<Datasource[]>([]);
 const datasourceLoading = ref(false);
 const tableLoading = ref(false);
 const columnLoading = ref(false);
 const tableOptions = ref<TableMetadata[]>([]);
 const columnOptions = ref<ColumnMetadata[]>([]);
+interface FilterTableOption extends TableMetadata {
+	datasourceId: number;
+	datasourceName: string;
+}
+
+interface FilterColumnOption extends ColumnMetadata {
+	datasourceId: number;
+	datasourceName: string;
+	tableName: string;
+}
+
+const filterTableMetadata = ref<FilterTableOption[]>([]);
+const filterColumnMetadata = ref<FilterColumnOption[]>([]);
+const filterMetadataLoading = ref(false);
 let metadataRequestId = 0;
 
 // ——— useCrudPage ———
-const searchKeyword = ref('');
+const queryForm = reactive<{
+	datasourceId?: number;
+	tableName: string;
+	columnName: string;
+	businessName: string;
+	synonyms: string;
+	createdTimeStart: string;
+	createdTimeEnd: string;
+	updatedTimeStart: string;
+	updatedTimeEnd: string;
+}>({
+	tableName: '',
+	columnName: '',
+	businessName: '',
+	synonyms: '',
+	createdTimeStart: '',
+	createdTimeEnd: '',
+	updatedTimeStart: '',
+	updatedTimeEnd: '',
+});
+
+type DatePickerValue = string | Date;
+
+function normalizeDatePickerValue(value: DatePickerValue): string {
+	if (value instanceof Date) {
+		const year = value.getFullYear();
+		const month = String(value.getMonth() + 1).padStart(2, '0');
+		const day = String(value.getDate()).padStart(2, '0');
+		return `${year}-${month}-${day}`;
+	}
+	return value.slice(0, 10);
+}
+
+function applyDateRange(
+	value: DatePickerValue[] | null | undefined,
+	setStart: (value: string) => void,
+	setEnd: (value: string) => void,
+) {
+	const dates = value?.filter(Boolean).map(normalizeDatePickerValue) || [];
+	setStart(dates[0] || '');
+	setEnd(dates.length > 1 ? dates[dates.length - 1] : '');
+}
+
+const createdDateRange = computed<DatePickerValue[]>({
+	get: () =>
+		[queryForm.createdTimeStart, queryForm.createdTimeEnd].filter(
+			(value): value is string => Boolean(value),
+		),
+	set: (value) =>
+		applyDateRange(
+			value,
+			(start) => (queryForm.createdTimeStart = start),
+			(end) => (queryForm.createdTimeEnd = end),
+		),
+});
+
+const updatedDateRange = computed<DatePickerValue[]>({
+	get: () =>
+		[queryForm.updatedTimeStart, queryForm.updatedTimeEnd].filter(
+			(value): value is string => Boolean(value),
+		),
+	set: (value) =>
+		applyDateRange(
+			value,
+			(start) => (queryForm.updatedTimeStart = start),
+			(end) => (queryForm.updatedTimeEnd = end),
+		),
+});
+
+function formatDateRange(start: string, end: string) {
+	if (!start && !end) return '';
+	return [start, end || start].filter(Boolean).join(' 至 ');
+}
+
+function closeDateRangeMenu(
+	value: DatePickerValue[] | null,
+	range: 'created' | 'updated',
+) {
+	if (value && value.length > 1) {
+		if (range === 'created') createdDateMenu.value = false;
+		else updatedDateMenu.value = false;
+	}
+}
+
+function clearCreatedDateRange() {
+	createdDateRange.value = [];
+	createdDateMenu.value = false;
+}
+
+function clearUpdatedDateRange() {
+	updatedDateRange.value = [];
+	updatedDateMenu.value = false;
+}
 
 const {
 	loading,
@@ -537,8 +814,7 @@ const {
 	saveItem,
 	deleteItem,
 } = useCrudPage<SemanticModel, SemanticModelAddDto, SemanticModel>({
-	loadFn: () =>
-		semanticModelService.list(agentId.value, searchKeyword.value || undefined),
+	loadFn: () => semanticModelService.list(agentId.value, buildQuery()),
 	createFn: (data) => semanticModelService.create(data),
 	updateFn: (id, data) => semanticModelService.update(id, data),
 	deleteFn: (id) => semanticModelService.delete(id),
@@ -554,6 +830,109 @@ const {
 		status: 1,
 	}),
 });
+
+function buildQuery(): Omit<SemanticModelQuery, 'agentId'> {
+	return {
+		datasourceId: queryForm.datasourceId,
+		tableName: queryForm.tableName || undefined,
+		columnName: queryForm.columnName || undefined,
+		businessName: queryForm.businessName || undefined,
+		synonyms: queryForm.synonyms || undefined,
+		createdTimeStart: queryForm.createdTimeStart
+			? `${queryForm.createdTimeStart}T00:00:00`
+			: undefined,
+		createdTimeEnd: queryForm.createdTimeEnd
+			? `${queryForm.createdTimeEnd}T23:59:59`
+			: undefined,
+		updatedTimeStart: queryForm.updatedTimeStart
+			? `${queryForm.updatedTimeStart}T00:00:00`
+			: undefined,
+		updatedTimeEnd: queryForm.updatedTimeEnd
+			? `${queryForm.updatedTimeEnd}T23:59:59`
+			: undefined,
+	};
+}
+
+function resetQuery() {
+	Object.assign(queryForm, {
+		datasourceId: undefined,
+		tableName: '',
+		columnName: '',
+		businessName: '',
+		synonyms: '',
+		createdTimeStart: '',
+		createdTimeEnd: '',
+		updatedTimeStart: '',
+		updatedTimeEnd: '',
+	});
+	void loadSemanticModels();
+}
+
+const filterTableOptions = computed(() => {
+	if (!queryForm.datasourceId) return filterTableMetadata.value;
+	return filterTableMetadata.value.filter(
+		(table) => table.datasourceId === queryForm.datasourceId,
+	);
+});
+
+const filterColumnOptions = computed(() => {
+	if (!queryForm.datasourceId) return filterColumnMetadata.value;
+	return filterColumnMetadata.value.filter(
+		(column) => column.datasourceId === queryForm.datasourceId,
+	);
+});
+
+async function loadFilterCandidates() {
+	filterMetadataLoading.value = true;
+	try {
+		const datasourceEntries = datasourceList.value.filter(
+			(datasource): datasource is Datasource & { id: number } =>
+				datasource.id !== undefined,
+		);
+		const tableGroups = await Promise.all(
+			datasourceEntries.map(async (datasource) => {
+				try {
+					const tables = await datasourceService.getDatasourceTableDetails(
+						datasource.id,
+					);
+					return tables.map((table) => ({
+						...table,
+						datasourceId: datasource.id,
+						datasourceName: datasource.name || '未命名数据源',
+					}));
+				} catch {
+					return [];
+				}
+			}),
+		);
+		const tables = tableGroups.flat();
+		filterTableMetadata.value = tables;
+
+		const columnGroups = await Promise.all(
+			tables.map(async (table) => {
+				try {
+					const columns =
+						await datasourceService.getInitializedTableColumnDetails(
+							table.datasourceId,
+							table.name,
+							table.schema,
+						);
+					return columns.map((column) => ({
+						...column,
+						datasourceId: table.datasourceId,
+						datasourceName: table.datasourceName,
+						tableName: table.name,
+					}));
+				} catch {
+					return [];
+				}
+			}),
+		);
+		filterColumnMetadata.value = columnGroups.flat();
+	} finally {
+		filterMetadataLoading.value = false;
+	}
+}
 
 const dataTypeOptions = computed(() => {
 	const selectedColumn = columnOptions.value.find(
@@ -574,11 +953,30 @@ const headers = [
 	{ title: '表名', key: 'tableName', width: 220, minWidth: '220px' },
 	{ title: '字段名', key: 'columnName', width: 180, minWidth: '180px' },
 	{ title: '业务名称', key: 'businessName', width: 180, minWidth: '180px' },
-	{ title: '同义词', key: 'synonyms', width: 200, minWidth: '200px', sortable: false },
+	{
+		title: '同义词',
+		key: 'synonyms',
+		width: 200,
+		minWidth: '200px',
+		sortable: false,
+	},
 	{ title: '数据类型', key: 'dataType', width: 130, minWidth: '130px' },
-	{ title: '状态', key: 'status', width: 100, minWidth: '100px', sortable: false },
+	{
+		title: '状态',
+		key: 'status',
+		width: 100,
+		minWidth: '100px',
+		sortable: false,
+	},
 	{ title: '创建时间', key: 'createdTime', width: 190, minWidth: '190px' },
-	{ title: '操作', key: 'actions', width: 140, minWidth: '140px', sortable: false },
+	{ title: '最后更新时间', key: 'updateTime', width: 190, minWidth: '190px' },
+	{
+		title: '操作',
+		key: 'actions',
+		width: 140,
+		minWidth: '140px',
+		sortable: false,
+	},
 ];
 
 function datasourceLabel(datasourceId?: number) {
@@ -624,8 +1022,11 @@ async function loadDataSources() {
 	datasourceLoading.value = true;
 	try {
 		datasourceList.value = await datasourceService.getAllDatasource();
+		await loadFilterCandidates();
 	} catch {
 		datasourceList.value = [];
+		filterTableMetadata.value = [];
+		filterColumnMetadata.value = [];
 		$tip('获取数据源列表失败', { color: 'error', icon: 'mdi-alert-circle' });
 	} finally {
 		datasourceLoading.value = false;
@@ -856,8 +1257,6 @@ async function executeExcelImport() {
 	}
 }
 
-// Note: loadSemanticModels passes searchKeyword on each call
-
 function openBatchImportDialog() {
 	batchImportDialogVisible.value = true;
 	importFile.value = null;
@@ -883,6 +1282,23 @@ onMounted(() => {
 	white-space: nowrap;
 }
 
+.semantic-model-table__footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	min-height: 64px;
+	padding: 8px 16px;
+	border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.semantic-model-table__footer :deep(.v-data-table-footer) {
+	flex: 1 1 auto;
+	justify-content: flex-end;
+	min-height: 48px;
+	padding: 0;
+}
+
 .datasource-cell {
 	max-width: 160px;
 	vertical-align: middle;
@@ -901,6 +1317,16 @@ onMounted(() => {
 }
 
 @media (max-width: 600px) {
+	.semantic-model-table__footer {
+		align-items: stretch;
+		flex-direction: column;
+		gap: 4px;
+	}
+
+	.semantic-model-table__footer :deep(.v-chip) {
+		align-self: flex-start;
+	}
+
 	.semantic-model-dialog {
 		max-height: 100dvh;
 	}
