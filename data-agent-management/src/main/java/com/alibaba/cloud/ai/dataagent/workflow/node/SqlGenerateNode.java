@@ -187,7 +187,7 @@ public class SqlGenerateNode implements NodeAction {
 			return "无";
 		}
 
-		Map<String, String> executionResults = StateUtil.getObjectValue(state, SQL_EXECUTE_NODE_OUTPUT, Map.class,
+		Map<String, String> executionResults = StateUtil.getMapValue(state, SQL_EXECUTE_NODE_OUTPUT,
 				new HashMap<>());
 		StringBuilder context = new StringBuilder();
 		for (int step = 1; step < currentStep; step++) {

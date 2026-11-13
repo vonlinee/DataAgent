@@ -61,7 +61,7 @@ public class PythonAnalyzeNode implements NodeAction {
 				new HashMap<>());
 
 		// 检查是否进入降级模式
-		boolean isFallbackMode = StateUtil.getObjectValue(state, PYTHON_FALLBACK_MODE, Boolean.class, false);
+		boolean isFallbackMode = StateUtil.getBooleanValue(state, PYTHON_FALLBACK_MODE);
 
 		if (isFallbackMode) {
 			// 降级模式

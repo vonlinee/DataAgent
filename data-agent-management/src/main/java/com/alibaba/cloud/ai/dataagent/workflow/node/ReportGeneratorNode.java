@@ -45,7 +45,7 @@ import static com.alibaba.cloud.ai.dataagent.constant.Constant.*;
 /**
  * Report generation node that creates comprehensive analysis reports based on execution
  * results.
- *
+ * <p>
  * This node is responsible for: - Generating detailed analysis reports from SQL execution
  * results - Summarizing data insights and findings - Providing comprehensive answers to
  * user queries - Creating structured final output for users
@@ -86,16 +86,7 @@ public class ReportGeneratorNode implements NodeAction {
 		String summaryAndRecommendations = executionStep.getToolParameters().getSummaryAndRecommendations();
 
 		// Get agent id from state
-		String agentIdStr = StateUtil.getStringValue(state, AGENT_ID);
-		Long agentId = null;
-		try {
-			if (agentIdStr != null) {
-				agentId = Long.parseLong(agentIdStr);
-			}
-		}
-		catch (NumberFormatException ignore) {
-			// ignore parse error, treat as global config
-		}
+		Long agentId = StateUtil.getAgentId(state);
 
 		// Generate report streaming flux
 		Flux<ChatResponse> reportGenerationFlux = generateReport(userInput, plan, executionResults,

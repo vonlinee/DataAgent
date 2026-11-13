@@ -18,14 +18,17 @@ package com.alibaba.cloud.ai.dataagent.util;
 import com.alibaba.cloud.ai.dataagent.dto.prompt.QueryEnhanceOutputDTO;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.Nullable;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.ai.document.Document;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+import static com.alibaba.cloud.ai.dataagent.constant.Constant.AGENT_ID;
 import static com.alibaba.cloud.ai.dataagent.constant.Constant.QUERY_ENHANCE_NODE_OUTPUT;
 
 /**
@@ -103,6 +106,27 @@ public class StateUtil {
 		return state.value(key).map(type::cast).orElseGet(defaultSupplier);
 	}
 
+	public static int getIntValue(OverAllState state, String key) {
+		return getObjectValue(state, key, Integer.class, 0);
+	}
+
+	public static boolean getBooleanValue(OverAllState state, String key, boolean defaultValue) {
+		return getObjectValue(state, key, Boolean.class, defaultValue);
+	}
+
+	public static boolean getBooleanValue(OverAllState state, String key) {
+		return getBooleanValue(state, key, false);
+	}
+
+	@SuppressWarnings("unchecked")
+	public static <K, V> Map<K, V> getMapValue(OverAllState state, String key, Map<K, V> defaultValue) {
+		return getObjectValue(state, key, Map.class, defaultValue);
+	}
+
+	public static <K, V> Map<K, V> getMapValue(OverAllState state, String key) {
+		return getMapValue(state, key, Map.of());
+	}
+
 	/**
 	 * Check if state value exists
 	 */
@@ -132,6 +156,17 @@ public class StateUtil {
 				QueryEnhanceOutputDTO.class);
 		// 获取canonical_query
 		return queryEnhanceOutputDTO.getCanonicalQuery();
+	}
+
+	@Nullable
+	public static Long getAgentId(OverAllState state) {
+		String agentIdStr = StateUtil.getStringValue(state, AGENT_ID);
+		try {
+			return Long.parseLong(agentIdStr);
+		} catch (NumberFormatException ignore) {
+			// ignore parse error, treat as global config
+		}
+		return null;
 	}
 
 }

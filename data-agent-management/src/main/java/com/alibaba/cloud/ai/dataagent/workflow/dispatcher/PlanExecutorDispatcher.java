@@ -35,7 +35,7 @@ public class PlanExecutorDispatcher implements EdgeAction {
 
 	@Override
 	public String apply(OverAllState state) {
-		boolean validationPassed = StateUtil.getObjectValue(state, PLAN_VALIDATION_STATUS, Boolean.class, false);
+		boolean validationPassed = StateUtil.getBooleanValue(state, PLAN_VALIDATION_STATUS);
 
 		if (validationPassed) {
 			log.info("Plan validation passed. Proceeding to next step.");
@@ -50,7 +50,7 @@ public class PlanExecutorDispatcher implements EdgeAction {
 		else {
 			// Plan validation failed, check repair count and decide whether to retry or
 			// end.
-			int repairCount = StateUtil.getObjectValue(state, PLAN_REPAIR_COUNT, Integer.class, 0);
+			int repairCount = StateUtil.getIntValue(state, PLAN_REPAIR_COUNT);
 
 			if (repairCount > MAX_REPAIR_ATTEMPTS) {
 				log.error("Plan repair attempts exceeded the limit of {}. Terminating execution.", MAX_REPAIR_ATTEMPTS);

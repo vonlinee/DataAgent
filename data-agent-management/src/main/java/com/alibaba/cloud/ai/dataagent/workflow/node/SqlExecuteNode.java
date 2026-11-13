@@ -185,7 +185,7 @@ public class SqlExecuteNode implements NodeAction {
 		result.put(SQL_GENERATE_COUNT, 0);
 
 		try {
-			Map<String, String> existingResults = StateUtil.getObjectValue(state, SQL_EXECUTE_NODE_OUTPUT, Map.class,
+			Map<String, String> existingResults = StateUtil.getMapValue(state, SQL_EXECUTE_NODE_OUTPUT,
 					new HashMap<>());
 			Map<String, String> updatedResults = PlanProcessUtil.addStepResult(existingResults, currentStep,
 					strResultSetJson);

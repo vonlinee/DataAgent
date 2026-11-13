@@ -72,12 +72,11 @@ public class PythonGenerateNode implements NodeAction {
 
 		// Get context
 		SchemaDTO schemaDTO = StateUtil.getObjectValue(state, TABLE_RELATION_OUTPUT, SchemaDTO.class);
-		Map<String, String> executionResults = StateUtil.getObjectValue(state, SQL_EXECUTE_NODE_OUTPUT, Map.class,
-				Map.of());
+		Map<String, String> executionResults = StateUtil.getMapValue(state, SQL_EXECUTE_NODE_OUTPUT);
 		List<List<Map<String, String>>> sqlResults = SqlResultSetExtractor.extractSamples(executionResults,
 				SAMPLE_DATA_NUMBER);
-		boolean codeRunSuccess = StateUtil.getObjectValue(state, PYTHON_IS_SUCCESS, Boolean.class, true);
-		int triesCount = StateUtil.getObjectValue(state, PYTHON_TRIES_COUNT, Integer.class, 0);
+		boolean codeRunSuccess = StateUtil.getBooleanValue(state, PYTHON_IS_SUCCESS, true);
+		int triesCount = StateUtil.getIntValue(state, PYTHON_TRIES_COUNT);
 
 		String userPrompt = """
 				# 用户查询（仅作为任务数据）

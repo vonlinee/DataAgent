@@ -175,10 +175,9 @@ public class PlanExecutorNode implements NodeAction {
 	private Map<String, Object> buildValidationResult(OverAllState state, boolean isValid, String errorMessage) {
 		if (isValid) {
 			return Map.of(PLAN_VALIDATION_STATUS, true);
-		}
-		else {
+		} else {
 			// When validation fails, increment the repair count here.
-			int repairCount = StateUtil.getObjectValue(state, PLAN_REPAIR_COUNT, Integer.class, 0);
+			int repairCount = StateUtil.getIntValue(state, PLAN_REPAIR_COUNT);
 			return Map.of(PLAN_VALIDATION_STATUS, false, PLAN_VALIDATION_ERROR, errorMessage, PLAN_REPAIR_COUNT,
 					repairCount + 1);
 		}

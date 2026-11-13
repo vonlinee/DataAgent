@@ -41,14 +41,14 @@ public class HumanFeedbackNode implements NodeAction {
 		Map<String, Object> updated = new HashMap<>();
 
 		// 检查最大修复次数
-		int repairCount = StateUtil.getObjectValue(state, PLAN_REPAIR_COUNT, Integer.class, 0);
+		int repairCount = StateUtil.getIntValue(state, PLAN_REPAIR_COUNT);
 		if (repairCount >= 3) {
 			log.warn("Max repair attempts (3) exceeded, ending process");
 			updated.put("human_next_node", "END");
 			return updated;
 		}
 
-		Map<String, Object> feedbackData = StateUtil.getObjectValue(state, HUMAN_FEEDBACK_DATA, Map.class, Map.of());
+		Map<String, Object> feedbackData = StateUtil.getMapValue(state, HUMAN_FEEDBACK_DATA);
 		if (feedbackData.isEmpty()) {
 			updated.put("human_next_node", "WAIT_FOR_FEEDBACK");
 			return updated;

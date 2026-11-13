@@ -77,12 +77,11 @@ public class PythonExecuteNode implements NodeAction {
 		try {
 			// Get context
 			String pythonCode = StateUtil.getStringValue(state, PYTHON_GENERATE_NODE_OUTPUT);
-			Map<String, String> executionResults = StateUtil.getObjectValue(state, SQL_EXECUTE_NODE_OUTPUT, Map.class,
-					Map.of());
+			Map<String, String> executionResults = StateUtil.getMapValue(state, SQL_EXECUTE_NODE_OUTPUT);
 			List<List<Map<String, String>>> sqlResults = SqlResultSetExtractor.extractAll(executionResults);
 
 			// 检查重试次数
-			int triesCount = StateUtil.getObjectValue(state, PYTHON_TRIES_COUNT, Integer.class, 0);
+			int triesCount = StateUtil.getIntValue(state, PYTHON_TRIES_COUNT);
 
 			PythonDependencyMetadata metadata = dependencyMetadataParser.parse(pythonCode);
 			PythonCodeExecutorService.TaskRequest taskRequest = new PythonCodeExecutorService.TaskRequest(pythonCode,
