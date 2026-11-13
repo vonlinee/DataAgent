@@ -18,6 +18,7 @@ package com.alibaba.cloud.ai.dataagent.connector;
 import com.alibaba.cloud.ai.dataagent.bo.schema.ResultSetBO;
 import com.alibaba.cloud.ai.dataagent.enums.DatabaseDialectEnum;
 import com.alibaba.cloud.ai.dataagent.util.ResultSetConvertUtil;
+import jakarta.annotation.Nullable;
 import org.apache.commons.lang3.StringUtils;
 
 import java.sql.Connection;
@@ -48,35 +49,39 @@ public class SqlExecutor {
 		try (Statement statement = connection.createStatement()) {
 			statement.setMaxRows(RESULT_SET_LIMIT);
 			statement.setQueryTimeout(STATEMENT_TIMEOUT);
-
-			DatabaseMetaData metaData = connection.getMetaData();
-			String dialect = metaData.getDatabaseProductName();
-
-			if (dialect.equals(DatabaseDialectEnum.POSTGRESQL.code)) {
-				if (StringUtils.isNotEmpty(schema)) {
-					statement.execute("set search_path = '" + schema + "';");
-				}
-			}
-			else if (dialect.equals(DatabaseDialectEnum.H2.code)) {
-				if (StringUtils.isNotEmpty(schema)) {
-					statement.execute("use " + schema + ";");
-				}
-			}
-			else if (dialect.equals(DatabaseDialectEnum.ORACLE.code)) {
-				if (StringUtils.isNotEmpty(schema)) {
-					statement.execute("ALTER SESSION SET CURRENT_SCHEMA = " + schema);
-				}
-			}
-			else if (isDameng(dialect)) {
-				if (StringUtils.isNotEmpty(schema)) {
-					statement.execute("SET SCHEMA " + quoteIdentifier(schema));
-				}
-			}
-
+			setCurrentSchema(statement, schema);
 			try (ResultSet rs = statement.executeQuery(sql)) {
 				return ResultSetBuilder.buildFrom(rs, schema);
 			}
 		}
+	}
+
+	static void setCurrentSchema(Statement statement, String schema) throws SQLException {
+		if (StringUtils.isEmpty(schema)) {
+			return;
+		}
+		Connection connection = statement.getConnection();
+		DatabaseMetaData metaData = connection.getMetaData();
+		DatabaseDialectEnum dialectEnum = resolveDialect(metaData);
+		if (dialectEnum != null) {
+			String changeSchemaSql = dialectEnum.getChangeSchemaSql(schema);
+			statement.execute(changeSchemaSql);
+		}
+	}
+
+	@Nullable
+	private static DatabaseDialectEnum resolveDialect(DatabaseMetaData databaseMetaData) throws SQLException {
+		String dialect = databaseMetaData.getDatabaseProductName();
+		if (isDameng(dialect)) {
+			return DatabaseDialectEnum.DAMENG;
+		} else if (dialect.equals(DatabaseDialectEnum.POSTGRESQL.code)) {
+			return DatabaseDialectEnum.POSTGRESQL;
+		} else if (dialect.equals(DatabaseDialectEnum.H2.code)) {
+			return DatabaseDialectEnum.H2;
+		} else if (dialect.equals(DatabaseDialectEnum.ORACLE.code)) {
+			return DatabaseDialectEnum.ORACLE;
+		}
+		return null;
 	}
 
 	/**
@@ -111,42 +116,14 @@ public class SqlExecutor {
 		String dialect = metaData.getDatabaseProductName();
 
 		try (Statement statement = connection.createStatement()) {
-
-			if (dialect.equals(DatabaseDialectEnum.MYSQL.code)) {
-				if (StringUtils.isNotEmpty(databaseOrSchema)) {
-					statement.execute("use `" + databaseOrSchema + "`;");
-				}
-			}
-			else if (dialect.equals(DatabaseDialectEnum.POSTGRESQL.code)) {
-				if (StringUtils.isNotEmpty(databaseOrSchema)) {
-					statement.execute("set search_path = '" + databaseOrSchema + "';");
-				}
-			}
-			else if (dialect.equals(DatabaseDialectEnum.ORACLE.code)) {
-				if (StringUtils.isNotEmpty(databaseOrSchema)) {
-					statement.execute("ALTER SESSION SET CURRENT_SCHEMA = " + databaseOrSchema);
-				}
-			}
-			else if (isDameng(dialect)) {
-				if (StringUtils.isNotEmpty(databaseOrSchema)) {
-					statement.execute("SET SCHEMA " + quoteIdentifier(databaseOrSchema));
-				}
-			}
-
+			setCurrentSchema(statement, databaseOrSchema);
 			ResultSet rs = statement.executeQuery(sql);
-
 			List<String[]> result = ResultSetConvertUtil.convert(rs);
-
-			if (StringUtils.isNotEmpty(databaseOrSchema) && dialect.equals(DatabaseDialectEnum.MYSQL.code)) {
-				statement.execute("use `" + originalDb + "`;");
+			if (dialect.equals(DatabaseDialectEnum.MYSQL.code)) {
+				setCurrentSchema(statement, originalDb);
 			}
-
 			return result;
 		}
-	}
-
-	private static String quoteIdentifier(String identifier) {
-		return '"' + identifier.replace("\"", "\"\"") + '"';
 	}
 
 	private static boolean isDameng(String databaseProductName) {

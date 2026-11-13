@@ -341,7 +341,7 @@ class MysqlJdbcDdlTest {
 			mockedStatic.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString()))
 				.thenReturn(resultArr);
 
-			List<TableInfoBO> tables = mysqlJdbcDdl.fetchTables(connection, "testdb", Arrays.asList("users"));
+			List<TableInfoBO> tables = mysqlJdbcDdl.fetchTables(connection, "testdb", List.of("users"));
 
 			assertTrue(tables.isEmpty());
 		}
@@ -357,7 +357,7 @@ class MysqlJdbcDdlTest {
 			mockedStatic.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString()))
 				.thenReturn(resultArr);
 
-			List<TableInfoBO> tables = mysqlJdbcDdl.fetchTables(connection, "testdb", Arrays.asList("users"));
+			List<TableInfoBO> tables = mysqlJdbcDdl.fetchTables(connection, "testdb", List.of("users"));
 
 			assertEquals(1, tables.size());
 		}
@@ -372,7 +372,7 @@ class MysqlJdbcDdlTest {
 				.thenThrow(new SQLException("error"));
 
 			assertRuntimeCause(SQLException.class, "error",
-					() -> mysqlJdbcDdl.fetchTables(connection, "testdb", Arrays.asList("users")));
+					() -> mysqlJdbcDdl.fetchTables(connection, "testdb", List.of("users")));
 		}
 	}
 
@@ -465,7 +465,7 @@ class MysqlJdbcDdlTest {
 				.thenThrow(new SQLException("error"));
 
 			assertRuntimeCause(SQLException.class, "error",
-					() -> mysqlJdbcDdl.showForeignKeys(connection, "testdb", Arrays.asList("orders")));
+					() -> mysqlJdbcDdl.showForeignKeys(connection, "testdb", List.of("orders")));
 		}
 	}
 

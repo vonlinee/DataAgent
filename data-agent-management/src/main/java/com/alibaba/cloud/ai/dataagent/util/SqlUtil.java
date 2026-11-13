@@ -121,4 +121,7 @@ public class SqlUtil {
 		return dbType == null ? DbType.other : dbType;
 	}
 
+	public static String quoteIdentifier(String identifier) {
+		return '"' + identifier.replace("\"", "\"\"") + '"';
+	}
 }

@@ -15,23 +15,52 @@
  */
 package com.alibaba.cloud.ai.dataagent.enums;
 
+import com.alibaba.cloud.ai.dataagent.util.SqlUtil;
+import lombok.Getter;
+
 import java.util.Optional;
 
+@Getter
 public enum DatabaseDialectEnum {
 
-	MYSQL("MySQL"),
+	MYSQL("MySQL") {
+		@Override
+		public String getChangeSchemaSql(String schema) {
+			return "use `" + schema + "`;";
+		}
+	},
 
 	SQLite("SQLite"),
 
-	POSTGRESQL("PostgreSQL"),
+	POSTGRESQL("PostgreSQL") {
+		@Override
+		public String getChangeSchemaSql(String schema) {
+			return "set search_path = '" + schema + "';";
+		}
+	},
 
-	H2("H2"),
+	H2("H2") {
+		@Override
+		public String getChangeSchemaSql(String schema) {
+			return "use " + schema + ";";
+		}
+	},
 
-	DAMENG("Dameng"),
+	DAMENG("Dameng") {
+		@Override
+		public String getChangeSchemaSql(String schema) {
+			return "SET SCHEMA " + SqlUtil.quoteIdentifier(schema);
+		}
+	},
 
 	SQL_SERVER("SqlServer"),
 
-	ORACLE("Oracle"),
+	ORACLE("Oracle") {
+		@Override
+		public String getChangeSchemaSql(String schema) {
+			return "ALTER SESSION SET CURRENT_SCHEMA = " + schema;
+		}
+	},
 
 	HIVE("Hive");
 
@@ -41,11 +70,7 @@ public enum DatabaseDialectEnum {
 		this.code = code;
 	}
 
-	public String getCode() {
-		return code;
-	}
-
-	public static Optional<DatabaseDialectEnum> getByCode(String code) {
+    public static Optional<DatabaseDialectEnum> getByCode(String code) {
 		for (DatabaseDialectEnum value : values()) {
 			if (value.code.equals(code)) {
 				return Optional.of(value);
@@ -54,4 +79,7 @@ public enum DatabaseDialectEnum {
 		return Optional.empty();
 	}
 
+	public String getChangeSchemaSql(String schema) {
+		return null;
+	}
 }
