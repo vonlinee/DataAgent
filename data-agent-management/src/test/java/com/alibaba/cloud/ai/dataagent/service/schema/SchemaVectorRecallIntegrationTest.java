@@ -55,7 +55,16 @@ class SchemaVectorRecallIntegrationTest {
 		vectorStoreService = new AgentVectorStoreServiceImpl(vectorStore, Optional.empty(), properties,
 				new DynamicFilterService(null, null), new MetadataDocumentRetriever(new StandardEnvironment()));
 		executorService = Executors.newSingleThreadExecutor();
-		schemaService = new SchemaServiceImpl(executorService, null, null, null, null, properties, vectorStoreService);
+		schemaService = new SchemaServiceImpl(
+				executorService,
+				null,
+				null,
+				null,
+				null,
+				properties,
+				vectorStoreService,
+				null,
+				null);
 
 		vectorStoreService.addDocuments("7",
 				List.of(tableDocument("orders", "订单销售数据"), tableDocument("users", "用户注册信息")));
