@@ -69,7 +69,8 @@ public class FeasibilityAssessmentNode implements NodeAction {
 		// 调用LLM进行可行性评估
 		Flux<ChatResponse> responseFlux = llmService.callUser(prompt, FeasibilityAssessmentOutputDTO.class);
 
-		Flux<GraphResponse<StreamingOutput>> generator = FluxUtil.createStreamingGeneratorWithMessages(this.getClass(),
+		Flux<GraphResponse<StreamingOutput<ChatResponse>>> generator =
+				FluxUtil.createStreamingGeneratorWithMessages(this.getClass(),
 				state, "正在进行可行性评估...", "可行性评估完成！", llmOutput -> {
 					FeasibilityAssessmentOutputDTO assessmentResult = OUTPUT_CONVERTER.convert(llmOutput);
 					log.debug("Feasibility assessment result: {}", assessmentResult);

@@ -43,7 +43,7 @@ import static com.alibaba.cloud.ai.dataagent.prompt.PromptHelper.buildMixMacSqlD
 
 /**
  * Semantic consistency validation node that checks SQL query semantic consistency.
- *
+ * <p>
  * This node is responsible for: - Validating SQL query semantic consistency against
  * schema and evidence - Providing validation results for query refinement - Handling
  * validation failures with recommendations - Managing step progression in execution plan
@@ -87,7 +87,8 @@ public class SemanticConsistencyNode implements NodeAction {
 		log.debug("Starting semantic consistency validation - SQL: {}", sql);
 		Flux<ChatResponse> validationResultFlux = nl2SqlService.performSemanticConsistency(semanticConsistencyDTO);
 
-		Flux<GraphResponse<StreamingOutput>> generator = FluxUtil.createStreamingGeneratorWithMessages(this.getClass(),
+		Flux<GraphResponse<StreamingOutput<ChatResponse>>> generator =
+				FluxUtil.createStreamingGeneratorWithMessages(this.getClass(),
 				state, "开始语义一致性校验", "语义一致性校验完成", validationResult -> {
 					SemanticConsistencyOutputDTO output = OUTPUT_CONVERTER.convert(validationResult);
 					Map<String, Object> result = buildValidationResult(output.isPassed(), output.getReason());
@@ -102,7 +103,8 @@ public class SemanticConsistencyNode implements NodeAction {
 	private Map<String, Object> buildStructuralValidationFailure(OverAllState state, String sql, String reason) {
 		log.warn("Generated SQL failed structural validation - reason: {}, SQL: {}", reason, sql);
 		Map<String, Object> result = buildValidationResult(false, reason);
-		Flux<GraphResponse<StreamingOutput>> generator = FluxUtil.createStreamingGeneratorWithMessages(this.getClass(),
+		Flux<GraphResponse<StreamingOutput<ChatResponse>>> generator =
+				FluxUtil.createStreamingGeneratorWithMessages(this.getClass(),
 				state, "开始SQL结构校验", "SQL结构校验未通过，准备重新生成", ignored -> result, Flux.empty());
 		return Map.of(SEMANTIC_CONSISTENCY_NODE_OUTPUT, generator);
 	}

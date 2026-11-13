@@ -22,6 +22,7 @@ import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.alibaba.cloud.ai.graph.streaming.OutputType;
 import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import org.springframework.ai.chat.metadata.Usage;
@@ -84,7 +85,7 @@ public final class FluxUtil {
 	 * @param sourceFlux source data stream
 	 * @return Flux instance
 	 */
-	public static Flux<GraphResponse<StreamingOutput>> createStreamingGeneratorWithMessages(
+	public static Flux<GraphResponse<StreamingOutput<ChatResponse>>> createStreamingGeneratorWithMessages(
 			Class<? extends NodeAction> nodeClass, OverAllState state, String startMessage, String completionMessage,
 			Function<String, Map<String, Object>> resultMapper, Flux<ChatResponse> sourceFlux) {
 		String nodeName = nodeClass.getSimpleName();
@@ -106,7 +107,7 @@ public final class FluxUtil {
 				() -> resultMapper.apply(collectedResult.toString()));
 	}
 
-	public static Flux<GraphResponse<StreamingOutput>> createStreamingGeneratorWithMessages(
+	public static Flux<GraphResponse<StreamingOutput<ChatResponse>>> createStreamingGeneratorWithMessages(
 			Class<? extends NodeAction> nodeClass, OverAllState state,
 			Function<String, Map<String, Object>> resultMapper, Flux<ChatResponse> sourceFlux) {
 		return createStreamingGeneratorWithMessages(nodeClass, state, null, null, resultMapper, sourceFlux);
@@ -122,7 +123,7 @@ public final class FluxUtil {
 	 * @param sourceMapper result of <code>sourceFlux</code> mapping function
 	 * @return Flux instance
 	 */
-	public static Flux<GraphResponse<StreamingOutput>> createStreamingGenerator(Class<? extends NodeAction> nodeClass,
+	public static Flux<GraphResponse<StreamingOutput<ChatResponse>>> createStreamingGenerator(Class<? extends NodeAction> nodeClass,
 			OverAllState state, Flux<ChatResponse> sourceFlux, Flux<ChatResponse> preFlux, Flux<ChatResponse> sufFlux,
 			Function<String, Map<String, Object>> sourceMapper) {
 		String nodeName = nodeClass.getSimpleName();
@@ -133,14 +134,13 @@ public final class FluxUtil {
 				() -> sourceMapper.apply(collectedResult.toString()));
 	}
 
-	private static Flux<GraphResponse<StreamingOutput>> toStreamingResponseFlux(String nodeName, OverAllState state,
+	private static Flux<GraphResponse<StreamingOutput<ChatResponse>>> toStreamingResponseFlux(String nodeName, OverAllState state,
 			Flux<ChatResponse> sourceFlux, Supplier<Map<String, Object>> resultSupplier) {
-		Object threadId = state.value(TRACE_THREAD_ID).orElse(null);
+		String threadId = (String) state.value(TRACE_THREAD_ID).orElse(null);
 
-		Flux<GraphResponse<StreamingOutput>> streamingFlux = sourceFlux
+		Flux<GraphResponse<StreamingOutput<ChatResponse>>> streamingFlux = sourceFlux
 			.doOnNext(response -> extractAndAccumulateTokens(threadId, response))
-			.filter(response -> response != null && response.getResult() != null
-					&& response.getResult().getOutput() != null)
+			.filter(Objects::nonNull)
 			.map(response -> GraphResponse.of(new StreamingOutput<>(response.getResult().getOutput(), response,
 					nodeName, "", state, OutputType.from(true, nodeName))));
 
@@ -151,11 +151,11 @@ public final class FluxUtil {
 	/**
 	 * 从 ChatResponse 中提取 token 用量并累计到 Langfuse Reporter
 	 */
-	private static void extractAndAccumulateTokens(Object threadId, ChatResponse response) {
-		if (threadId == null || response.getMetadata() == null) {
+	private static void extractAndAccumulateTokens(String threadId, ChatResponse response) {
+		if (threadId == null) {
 			return;
 		}
-		Usage usage = response.getMetadata().getUsage();
+        Usage usage = response.getMetadata().getUsage();
 		if (usage != null && (usage.getPromptTokens() > 0 || usage.getCompletionTokens() > 0)) {
 			LangfuseService.accumulateTokens(threadId, usage.getPromptTokens(), usage.getCompletionTokens());
 		}

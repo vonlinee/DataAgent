@@ -70,7 +70,8 @@ public class PythonAnalyzeNode implements NodeAction {
 
 			Flux<ChatResponse> fallbackFlux = Flux.just(ChatResponseUtil.createResponse(fallbackMessage));
 
-			Flux<GraphResponse<StreamingOutput>> generator = FluxUtil.createStreamingGeneratorWithMessages(
+			Flux<GraphResponse<StreamingOutput<ChatResponse>>> generator =
+					FluxUtil.createStreamingGeneratorWithMessages(
 					this.getClass(), state, "正在处理分析结果...\n", "\n处理完成。", aiResponse -> {
 						Map<String, String> updatedSqlResult = new HashMap<>(sqlExecuteResult);
 						updatedSqlResult.put("step_" + currentStep + "_analysis", fallbackMessage);
@@ -86,7 +87,8 @@ public class PythonAnalyzeNode implements NodeAction {
 
 		Flux<ChatResponse> pythonAnalyzeFlux = llmService.callSystem(systemPrompt);
 
-		Flux<GraphResponse<StreamingOutput>> generator = FluxUtil.createStreamingGeneratorWithMessages(this.getClass(),
+		Flux<GraphResponse<StreamingOutput<ChatResponse>>> generator =
+				FluxUtil.createStreamingGeneratorWithMessages(this.getClass(),
 				state, "正在分析代码运行结果...\n", "\n结果分析完成。", aiResponse -> {
 					Map<String, String> updatedSqlResult = new HashMap<>(sqlExecuteResult);
 					updatedSqlResult.put("step_" + currentStep + "_analysis", aiResponse);

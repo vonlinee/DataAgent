@@ -59,7 +59,8 @@ public class PlannerNode implements NodeAction {
 		Flux<ChatResponse> chatResponseFlux = Flux.concat(
 				Flux.just(ChatResponseUtil.createPureResponse(TextType.JSON.getStartSign())), flux,
 				Flux.just(ChatResponseUtil.createPureResponse(TextType.JSON.getEndSign())));
-		Flux<GraphResponse<StreamingOutput>> generator = FluxUtil.createStreamingGeneratorWithMessages(this.getClass(),
+		Flux<GraphResponse<StreamingOutput<ChatResponse>>> generator =
+				FluxUtil.createStreamingGeneratorWithMessages(this.getClass(),
 				state, v -> Map.of(PLANNER_NODE_OUTPUT, v.substring(TextType.JSON.getStartSign().length(),
 						v.length() - TextType.JSON.getEndSign().length())),
 				chatResponseFlux);

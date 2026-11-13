@@ -30,7 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author zihenzzz
- * @date 2026/2/16 13:54 基于 OpenTelemetry 的 Langfuse Reporter，用于追踪 LLM 调用
+ * @since 2026/2/16 13:54 基于 OpenTelemetry 的 Langfuse Reporter，用于追踪 LLM 调用
  */
 @Slf4j
 @Component
@@ -196,7 +196,7 @@ public class LangfuseService {
 	 * 同时写入两处：整轮运行的汇总累加器（根 span 用）与当前活跃的节点级累加器（子 span 用）。 后者可能不存在（Langfuse 未启用，或该 token
 	 * 产生于任何节点的 before/after 窗口之外），此时静默跳过。
 	 */
-	public static void accumulateTokens(Object threadId, long promptTokens, long completionTokens) {
+	public static void accumulateTokens(String threadId, long promptTokens, long completionTokens) {
 		if (threadId == null) {
 			return;
 		}

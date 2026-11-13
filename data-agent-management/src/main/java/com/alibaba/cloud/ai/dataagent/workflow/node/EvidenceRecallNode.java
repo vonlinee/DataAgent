@@ -81,7 +81,8 @@ public class EvidenceRecallNode implements NodeAction {
 		Sinks.Many<String> evidenceDisplaySink = Sinks.many().multicast().onBackpressureBuffer();
 
 		final Map<String, Object> resultMap = new HashMap<>();
-		Flux<GraphResponse<StreamingOutput>> generator = FluxUtil.createStreamingGenerator(this.getClass(), state,
+		Flux<GraphResponse<StreamingOutput<ChatResponse>>> generator =
+				FluxUtil.createStreamingGenerator(this.getClass(), state,
 				responseFlux,
 				Flux.just(ChatResponseUtil.createResponse("正在查询重写以更好召回evidence..."),
 						ChatResponseUtil.createPureResponse(TextType.JSON.getStartSign())),
@@ -92,7 +93,8 @@ public class EvidenceRecallNode implements NodeAction {
 					return resultMap;
 				});
 
-		Flux<GraphResponse<StreamingOutput>> evidenceFlux = FluxUtil.createStreamingGenerator(this.getClass(), state,
+		Flux<GraphResponse<StreamingOutput<ChatResponse>>> evidenceFlux =
+				FluxUtil.createStreamingGenerator(this.getClass(), state,
 				evidenceDisplaySink.asFlux().map(ChatResponseUtil::createPureResponse), Flux.empty(), Flux.empty(),
 				result -> resultMap);
 		return Map.of(EVIDENCE, generator.concatWith(evidenceFlux));

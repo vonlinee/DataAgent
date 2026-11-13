@@ -63,7 +63,8 @@ public class QueryEnhanceNode implements NodeAction {
 		// 调用LLM进行查询处理
 		Flux<ChatResponse> responseFlux = llmService.callUser(prompt);
 
-		Flux<GraphResponse<StreamingOutput>> generator = FluxUtil.createStreamingGenerator(this.getClass(), state,
+		Flux<GraphResponse<StreamingOutput<ChatResponse>>> generator =
+				FluxUtil.createStreamingGenerator(this.getClass(), state,
 				responseFlux,
 				Flux.just(ChatResponseUtil.createResponse("正在进行问题增强..."),
 						ChatResponseUtil.createPureResponse(TextType.JSON.getStartSign())),

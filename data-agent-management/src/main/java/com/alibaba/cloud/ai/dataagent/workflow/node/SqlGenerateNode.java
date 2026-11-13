@@ -76,7 +76,7 @@ public class SqlGenerateNode implements NodeAction {
 					executionStep.getToolParameters().getInstruction());
 			log.error("SQL generation failed, reason: {}", sqlGenerateOutput);
 			Flux<ChatResponse> preFlux = Flux.just(ChatResponseUtil.createResponse(sqlGenerateOutput));
-			Flux<GraphResponse<StreamingOutput>> generator = FluxUtil.createStreamingGeneratorWithMessages(
+			Flux<GraphResponse<StreamingOutput<ChatResponse>>> generator = FluxUtil.createStreamingGeneratorWithMessages(
 					this.getClass(), state, "正在进行重试评估...", "重试评估完成！",
 					retryOutput -> Map.of(SQL_GENERATE_OUTPUT, StateGraph.END, SQL_GENERATE_COUNT, 0), preFlux);
 			// reset the sql generate count
@@ -125,14 +125,14 @@ public class SqlGenerateNode implements NodeAction {
 						ChatResponseUtil.createResponse(completionMessage));
 			}));
 
-		Flux<GraphResponse<StreamingOutput>> generator = FluxUtil.createStreamingGeneratorWithMessages(this.getClass(),
+		Flux<GraphResponse<StreamingOutput<ChatResponse>>> generator =
+				FluxUtil.createStreamingGeneratorWithMessages(this.getClass(),
 				state, v -> {
 					String sql = nl2SqlService.sqlTrim(sqlCollector.toString());
 					if (isUnchangedExecutionRetry(retryDto, failedSql, sql)) {
 						log.warn("Regenerated SQL is unchanged after execution failure; stopping retry loop");
 						result.put(SQL_GENERATE_OUTPUT, StateGraph.END);
-					}
-					else {
+					} else {
 						result.put(SQL_GENERATE_OUTPUT, sql);
 					}
 					return result;

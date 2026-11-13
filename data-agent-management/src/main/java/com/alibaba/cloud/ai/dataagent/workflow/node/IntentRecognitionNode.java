@@ -67,7 +67,7 @@ public class IntentRecognitionNode implements NodeAction {
 		// 调用LLM进行意图识别
 		Flux<ChatResponse> responseFlux = llmService.callUser(prompt, IntentRecognitionOutputDTO.class);
 
-		Flux<GraphResponse<StreamingOutput>> generator = FluxUtil.createStreamingGenerator(this.getClass(), state,
+		Flux<GraphResponse<StreamingOutput<ChatResponse>>> generator = FluxUtil.createStreamingGenerator(this.getClass(), state,
 				responseFlux,
 				Flux.just(ChatResponseUtil.createResponse("正在进行意图识别..."),
 						ChatResponseUtil.createPureResponse(TextType.JSON.getStartSign())),

@@ -104,7 +104,8 @@ public class ReportGeneratorNode implements NodeAction {
 		TextType reportTextType = TextType.MARK_DOWN;
 
 		// Use utility class to create streaming generator with content collection
-		Flux<GraphResponse<StreamingOutput>> generator = FluxUtil.createStreamingGeneratorWithMessages(this.getClass(),
+		Flux<GraphResponse<StreamingOutput<ChatResponse>>> generator =
+				FluxUtil.createStreamingGeneratorWithMessages(this.getClass(),
 				state, "开始生成报告...", "报告生成完成！", reportContent -> {
 					log.debug("Generated report content: {}", reportContent);
 					Map<String, Object> result = new HashMap<>();

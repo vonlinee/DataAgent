@@ -88,11 +88,9 @@ public class SchemaRecallNode implements NodeAction {
 				emitter.complete();
 			});
 
-			Flux<GraphResponse<StreamingOutput>> generator = FluxUtil
-				.createStreamingGeneratorWithMessages(this.getClass(), state, currentState -> {
-					return Map.of(TABLE_DOCUMENTS_FOR_SCHEMA_OUTPUT, Collections.emptyList(),
-							COLUMN_DOCUMENTS__FOR_SCHEMA_OUTPUT, Collections.emptyList());
-				}, displayFlux);
+			Flux<GraphResponse<StreamingOutput<ChatResponse>>> generator = FluxUtil
+				.createStreamingGeneratorWithMessages(this.getClass(), state,
+						currentState -> buildDocumentResult(Collections.emptyList(), Collections.emptyList()), displayFlux);
 
 			return Map.of(SCHEMA_RECALL_NODE_OUTPUT, generator);
 		}
@@ -126,14 +124,17 @@ public class SchemaRecallNode implements NodeAction {
 			emitter.complete();
 		});
 
-		Flux<GraphResponse<StreamingOutput>> generator = FluxUtil.createStreamingGeneratorWithMessages(this.getClass(),
-				state, currentState -> {
-					return Map.of(TABLE_DOCUMENTS_FOR_SCHEMA_OUTPUT, tableDocuments,
-							COLUMN_DOCUMENTS__FOR_SCHEMA_OUTPUT, columnDocuments);
-				}, displayFlux);
+		Flux<GraphResponse<StreamingOutput<ChatResponse>>> generator =
+				FluxUtil.createStreamingGeneratorWithMessages(this.getClass(),
+				state, currentState -> buildDocumentResult(tableDocuments, columnDocuments), displayFlux);
 
 		// Return the processing result
 		return Map.of(SCHEMA_RECALL_NODE_OUTPUT, generator);
+	}
+
+	private Map<String, Object> buildDocumentResult(List<Document> tableDocuments, List<Document> columnDocuments) {
+		return Map.of(TABLE_DOCUMENTS_FOR_SCHEMA_OUTPUT, tableDocuments,
+				COLUMN_DOCUMENTS__FOR_SCHEMA_OUTPUT, columnDocuments);
 	}
 
 	private static List<String> extractTableName(List<Document> tableDocuments) {

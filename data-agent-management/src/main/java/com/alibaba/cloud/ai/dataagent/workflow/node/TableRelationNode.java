@@ -147,7 +147,8 @@ public class TableRelationNode implements NodeAction {
 
 		// Use utility class to create generator, directly return business logic computed
 		// result
-		Flux<GraphResponse<StreamingOutput>> generator = FluxUtil.createStreamingGeneratorWithMessages(this.getClass(),
+		Flux<GraphResponse<StreamingOutput<ChatResponse>>> generator =
+				FluxUtil.createStreamingGeneratorWithMessages(this.getClass(),
 				state, v -> resultMap, displayFlux);
 
 		// Return generator and essential state values that need to be available

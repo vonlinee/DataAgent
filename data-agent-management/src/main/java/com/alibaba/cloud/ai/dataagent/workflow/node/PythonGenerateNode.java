@@ -120,7 +120,8 @@ public class PythonGenerateNode implements NodeAction {
 
 		Flux<ChatResponse> pythonGenerateFlux = llmService.call(systemPrompt, userPrompt);
 
-		Flux<GraphResponse<StreamingOutput>> generator = FluxUtil.createStreamingGeneratorWithMessages(this.getClass(),
+		Flux<GraphResponse<StreamingOutput<ChatResponse>>> generator =
+				FluxUtil.createStreamingGeneratorWithMessages(this.getClass(),
 				state, aiResponse -> {
 					// Some AI models still output Markdown markup (even though Prompt has
 					// emphasized this)

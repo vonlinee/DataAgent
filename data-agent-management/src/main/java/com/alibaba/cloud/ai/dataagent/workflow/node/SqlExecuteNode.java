@@ -162,7 +162,8 @@ public class SqlExecuteNode implements NodeAction {
 
 		// Create generator using utility class, returning pre-computed business logic
 		// result
-		Flux<GraphResponse<StreamingOutput>> generator = FluxUtil.createStreamingGeneratorWithMessages(this.getClass(),
+		Flux<GraphResponse<StreamingOutput<ChatResponse>>> generator =
+				FluxUtil.createStreamingGeneratorWithMessages(this.getClass(),
 				state, v -> result, displayFlux);
 		return Map.of(SQL_EXECUTE_NODE_OUTPUT, generator);
 	}
@@ -170,7 +171,7 @@ public class SqlExecuteNode implements NodeAction {
 	/**
 	 * 调用大模型获取图表配置信息并填充到ResultSetBO中
 	 * @param state 整体状态
-	 * @param resultSetBO SQL执行结果
+	 * @param currentStep 当前步骤
 	 */
 	private ExecutedSqlResult executeAndStoreResult(OverAllState state, Integer currentStep, String sqlQuery,
 			DbConfigBO dbConfig, DbQueryParameter dbQueryParameter, Accessor dbAccessor, Map<String, Object> result)

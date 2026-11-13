@@ -107,7 +107,7 @@ public class PythonExecuteNode implements NodeAction {
 						emitter.complete();
 					});
 
-					Flux<GraphResponse<StreamingOutput>> fallbackGenerator = FluxUtil
+					Flux<GraphResponse<StreamingOutput<ChatResponse>>> fallbackGenerator = FluxUtil
 						.createStreamingGeneratorWithMessages(this.getClass(), state,
 								v -> Map.of(PYTHON_EXECUTE_NODE_OUTPUT, fallbackOutput, PYTHON_IS_SUCCESS, false,
 										PYTHON_FALLBACK_MODE, true),
@@ -142,7 +142,7 @@ public class PythonExecuteNode implements NodeAction {
 
 			// Create generator using utility class, returning pre-computed business logic
 			// result
-			Flux<GraphResponse<StreamingOutput>> generator = FluxUtil.createStreamingGeneratorWithMessages(
+			Flux<GraphResponse<StreamingOutput<ChatResponse>>> generator = FluxUtil.createStreamingGeneratorWithMessages(
 					this.getClass(), state,
 					v -> Map.of(PYTHON_EXECUTE_NODE_OUTPUT, finalStdout, PYTHON_IS_SUCCESS, true), displayFlux);
 

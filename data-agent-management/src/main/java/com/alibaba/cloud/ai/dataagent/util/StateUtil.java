@@ -88,7 +88,7 @@ public class StateUtil {
 			return type.cast(value);
 		}
 
-		// If it's a HashMap but we need a complex object, use JSON conversion
+		// If it's a HashMap, but we need a complex object, use JSON conversion
 		if (value instanceof HashMap && !type.equals(HashMap.class)) {
 			return OBJECT_MAPPER.convertValue(value, type);
 		}
