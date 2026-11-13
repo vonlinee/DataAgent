@@ -16,6 +16,7 @@
 package com.alibaba.cloud.ai.dataagent.agent;
 
 import com.alibaba.cloud.ai.dataagent.dto.AgentRequest;
+import com.alibaba.cloud.ai.dataagent.dto.AiModelProvider;
 import com.alibaba.cloud.ai.dataagent.dto.ModelConfigDTO;
 import com.alibaba.cloud.ai.dataagent.entity.Agent;
 import com.alibaba.cloud.ai.dataagent.enums.TextType;
@@ -29,6 +30,7 @@ import io.agentscope.core.message.TextBlock;
 import io.agentscope.core.middleware.MiddlewareBase;
 import io.agentscope.core.model.ExecutionConfig;
 import io.agentscope.core.model.GenerateOptions;
+import io.agentscope.core.model.Model;
 import io.agentscope.core.model.transport.ProxyConfig;
 import io.agentscope.core.skill.AgentSkill;
 import io.agentscope.core.skill.SkillBox;
@@ -36,6 +38,8 @@ import io.agentscope.core.skill.repository.ClasspathSkillRepository;
 import io.agentscope.core.tool.Toolkit;
 import io.agentscope.extensions.model.dashscope.DashScopeChatModel;
 import io.agentscope.extensions.model.dashscope.formatter.DashScopeChatFormatter;
+import io.agentscope.extensions.model.openai.OpenAIChatModel;
+import io.agentscope.extensions.model.openai.formatter.OpenAIChatFormatter;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
@@ -148,34 +152,11 @@ class DataAgent {
                 .maxAttempts(1)
                 .build();
 
-        GenerateOptions.Builder generateOptions = GenerateOptions.builder().thinkingBudget(4096);
-        if (config.getTemperature() != null) {
-            generateOptions.temperature(config.getTemperature());
-        }
-        if (config.getMaxTokens() != null) {
-            generateOptions.maxTokens(config.getMaxTokens());
-        }
-
-        DashScopeChatModel.Builder modelBuilder = DashScopeChatModel.builder()
-                .apiKey(config.getApiKey())
-                .modelName(config.getModelName())
-                .baseUrl(resolveDashScopeBaseUrl(config.getBaseUrl()))
-                .stream(true)
-                .enableThinking(true)
-                .formatter(new DashScopeChatFormatter())
-                .defaultOptions(generateOptions.build());
-        if (Boolean.TRUE.equals(config.getProxyEnabled())) {
-            if (!StringUtils.hasText(config.getProxyHost()) || config.getProxyPort() == null) {
-                throw new IllegalStateException("模型代理已开启，但代理地址或端口未配置。");
-            }
-            modelBuilder.proxy(ProxyConfig.http(config.getProxyHost(), config.getProxyPort(),
-                    config.getProxyUsername(), config.getProxyPassword()));
-        }
-
+        Model model = buildModel(config);
         return ReActAgent.builder()
                 .name(agent.getName())
                 .sysPrompt(resolveSystemPrompt(agent))
-                .model(modelBuilder.build())
+                .model(model)
                 .toolkit(toolkit)
                 .skillRepository(repo)
                 .middleware(new DatasourceSystemPromptMiddleware())
@@ -183,6 +164,45 @@ class DataAgent {
                 .modelExecutionConfig(modelExecConfig)
                 .toolExecutionConfig(toolExecConfig)
                 .build();
+    }
+
+    private Model buildModel(ModelConfigDTO config) {
+        GenerateOptions.Builder generateOptions = GenerateOptions.builder().thinkingBudget(4096);
+        if (config.getTemperature() != null) {
+            generateOptions.temperature(config.getTemperature());
+        }
+        if (config.getMaxTokens() != null) {
+            generateOptions.maxTokens(config.getMaxTokens());
+        }
+        if (AiModelProvider.OPENAI.getProvider().equalsIgnoreCase(config.getProvider())) {
+            return OpenAIChatModel.builder()
+                    .apiKey(config.getApiKey())
+                    .modelName(config.getModelName())
+                    .baseUrl(config.getBaseUrl())
+                    .stream(true)
+                    .formatter(new OpenAIChatFormatter())
+                    .generateOptions(generateOptions.build())
+                    .build();
+        } else if (AiModelProvider.QWEN.getProvider().equalsIgnoreCase(config.getProvider())) {
+            DashScopeChatModel.Builder modelBuilder = DashScopeChatModel.builder()
+                    .apiKey(config.getApiKey())
+                    .modelName(config.getModelName())
+                    .baseUrl(resolveDashScopeBaseUrl(config.getBaseUrl()))
+                    .stream(true)
+                    .enableThinking(true)
+                    .formatter(new DashScopeChatFormatter())
+                    .defaultOptions(generateOptions.build());
+            if (Boolean.TRUE.equals(config.getProxyEnabled())) {
+                if (!StringUtils.hasText(config.getProxyHost()) || config.getProxyPort() == null) {
+                    throw new IllegalStateException("模型代理已开启，但代理地址或端口未配置。");
+                }
+                modelBuilder.proxy(ProxyConfig.http(config.getProxyHost(), config.getProxyPort(),
+                        config.getProxyUsername(), config.getProxyPassword()));
+            }
+            return modelBuilder.build();
+        } else {
+            throw new UnsupportedOperationException("not supported model provider: " + config.getProvider());
+        }
     }
 
     static String resolveSystemPrompt(Agent agent) {

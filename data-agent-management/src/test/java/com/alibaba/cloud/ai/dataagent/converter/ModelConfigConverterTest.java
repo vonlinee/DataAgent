@@ -15,6 +15,7 @@
  */
 package com.alibaba.cloud.ai.dataagent.converter;
 
+import com.alibaba.cloud.ai.dataagent.dto.AiModelProvider;
 import com.alibaba.cloud.ai.dataagent.dto.ModelConfigDTO;
 import com.alibaba.cloud.ai.dataagent.entity.ModelConfig;
 import com.alibaba.cloud.ai.dataagent.enums.ModelType;
@@ -53,14 +54,14 @@ class ModelConfigConverterTest {
 
 		assertNotNull(dto);
 		assertEquals(1, dto.getId());
-		assertEquals("openai", dto.getProvider());
+		assertEquals(AiModelProvider.OPENAI.getProvider(), dto.getProvider());
 		assertEquals("http://localhost:8080", dto.getBaseUrl());
 		assertEquals("gpt-4", dto.getModelName());
 		assertEquals(0.7, dto.getTemperature());
 		assertEquals(2000, dto.getMaxTokens());
 		assertTrue(dto.getIsActive());
 		assertEquals("sk-test", dto.getApiKey());
-		assertEquals("CHAT", dto.getModelType());
+		assertEquals(ModelType.CHAT.getCode(), dto.getModelType());
 		assertEquals("/v1/chat", dto.getCompletionsPath());
 		assertEquals("/v1/embeddings", dto.getEmbeddingsPath());
 		assertTrue(dto.getProxyEnabled());
@@ -74,13 +75,13 @@ class ModelConfigConverterTest {
 	void toEntity_validDTO_mapsAllFields() {
 		ModelConfigDTO dto = ModelConfigDTO.builder()
 			.id(5)
-			.provider("deepseek")
+			.provider(AiModelProvider.DEEPSEEK.getProvider())
 			.baseUrl("http://localhost:9090")
 			.apiKey("sk-deep")
 			.modelName("deepseek-chat")
 			.temperature(0.5)
 			.maxTokens(4000)
-			.modelType("CHAT")
+			.modelType(ModelType.CHAT.getCode())
 			.completionsPath("/custom/chat")
 			.embeddingsPath("/custom/embed")
 			.proxyEnabled(false)
@@ -94,7 +95,7 @@ class ModelConfigConverterTest {
 
 		assertNotNull(entity);
 		assertEquals(5, entity.getId());
-		assertEquals("deepseek", entity.getProvider());
+		assertEquals(AiModelProvider.DEEPSEEK.getProvider(), entity.getProvider());
 		assertEquals("http://localhost:9090", entity.getBaseUrl());
 		assertEquals("sk-deep", entity.getApiKey());
 		assertEquals("deepseek-chat", entity.getModelName());
@@ -119,10 +120,10 @@ class ModelConfigConverterTest {
 	@Test
 	void toEntity_embeddingModelType_mapsCorrectly() {
 		ModelConfigDTO dto = ModelConfigDTO.builder()
-			.provider("openai")
+			.provider(AiModelProvider.OPENAI.getProvider())
 			.baseUrl("http://localhost")
 			.modelName("text-embedding")
-			.modelType("EMBEDDING")
+			.modelType(ModelType.EMBEDDING.getCode())
 			.apiKey("sk-test")
 			.build();
 
