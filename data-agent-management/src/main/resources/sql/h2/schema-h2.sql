@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS semantic_model (
   id INT NOT NULL AUTO_INCREMENT,
   agent_id INT NOT NULL COMMENT '关联的智能体ID',
   datasource_id INT NOT NULL COMMENT '关联的数据源ID',
+  schema_name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '表所属的Schema名称',
   table_name VARCHAR(255) NOT NULL COMMENT '关联的表名',
   column_name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '数据库中的物理字段名 (例如: csat_score)',
   business_name VARCHAR(255) NOT NULL DEFAULT '' COMMENT '业务名/别名 (例如: 客户满意度分数)',

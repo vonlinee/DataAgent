@@ -118,12 +118,15 @@ class SemanticModelServiceImplTest {
 		SemanticModelAddDTO dto = new SemanticModelAddDTO();
 		dto.setAgentId(1L);
 		dto.setTableName("users");
+		dto.setSchemaName("public");
 		dto.setColumnName("name");
 		dto.setBusinessName("User Name");
 
 		boolean result = service.addSemanticModel(dto);
 		assertTrue(result);
-		verify(semanticModelMapper).insert(any(SemanticModel.class));
+		ArgumentCaptor<SemanticModel> captor = ArgumentCaptor.forClass(SemanticModel.class);
+		verify(semanticModelMapper).insert(captor.capture());
+		assertEquals("public", captor.getValue().getSchemaName());
 	}
 
 	@Test
@@ -268,6 +271,7 @@ class SemanticModelServiceImplTest {
 
 		SemanticModelImportItem item = new SemanticModelImportItem();
 		item.setTableName("users");
+		item.setSchemaName("public");
 		item.setColumnName("name");
 		item.setBusinessName("Name");
 
@@ -280,6 +284,9 @@ class SemanticModelServiceImplTest {
 		assertEquals(1, result.getTotal());
 		assertEquals(1, result.getSuccessCount());
 		assertEquals(0, result.getFailCount());
+		ArgumentCaptor<SemanticModel> captor = ArgumentCaptor.forClass(SemanticModel.class);
+		verify(semanticModelMapper).insert(captor.capture());
+		assertEquals("public", captor.getValue().getSchemaName());
 	}
 
 	@Test

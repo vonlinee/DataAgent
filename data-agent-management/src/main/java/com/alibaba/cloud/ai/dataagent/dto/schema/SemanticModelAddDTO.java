@@ -36,6 +36,9 @@ public class SemanticModelAddDTO {
 	/** 关联的数据源ID */
 	private Integer datasourceId;
 
+	/** 表所属的数据库Schema名称 */
+	private String schemaName;
+
 	/** 关联的表名 */
 	@NotBlank(message = "表名不能为空")
 	private String tableName;

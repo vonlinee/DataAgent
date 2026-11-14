@@ -17,6 +17,7 @@ package com.alibaba.cloud.ai.dataagent.controller;
 
 import com.alibaba.cloud.ai.dataagent.dto.schema.SemanticModelAddDTO;
 import com.alibaba.cloud.ai.dataagent.dto.schema.SemanticModelBatchImportDTO;
+import com.alibaba.cloud.ai.dataagent.dto.schema.SemanticModelQueryReq;
 import com.alibaba.cloud.ai.dataagent.entity.SemanticModel;
 import com.alibaba.cloud.ai.dataagent.service.semantic.SemanticModelService;
 import com.alibaba.cloud.ai.dataagent.vo.ApiResponse;
@@ -87,6 +88,19 @@ class SemanticModelControllerTest {
 
 		verify(semanticModelService).search("test");
 		verify(semanticModelService, never()).getByAgentId(anyLong());
+	}
+
+	@Test
+	void list_withSchema_callsQuery() {
+		SemanticModelQueryReq query = new SemanticModelQueryReq();
+		query.setAgentId(1L);
+		query.setSchemaName("public");
+		when(semanticModelService.query(query)).thenReturn(List.of());
+
+		ApiResponse<List<SemanticModel>> result = controller.list(query);
+
+		assertTrue(result.isSuccess());
+		verify(semanticModelService).query(query);
 	}
 
 	@Test

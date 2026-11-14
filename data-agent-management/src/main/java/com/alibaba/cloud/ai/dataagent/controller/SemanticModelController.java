@@ -74,7 +74,8 @@ public class SemanticModelController {
 	}
 
 	private ApiResponse<List<SemanticModel>> listInternal(SemanticModelQueryReq query) {
-		boolean hasAdvancedFilters = query.getDatasourceId() != null || hasText(query.getTableName())
+		boolean hasAdvancedFilters = query.getDatasourceId() != null || hasText(query.getSchemaName())
+				|| hasText(query.getTableName())
 				|| hasText(query.getColumnName()) || hasText(query.getBusinessName()) || hasText(query.getSynonyms())
 				|| query.getCreatedTimeStart() != null || query.getCreatedTimeEnd() != null
 				|| query.getUpdatedTimeStart() != null || query.getUpdatedTimeEnd() != null;
@@ -107,8 +108,7 @@ public class SemanticModelController {
 		boolean success = semanticModelService.addSemanticModel(semanticModelAddDto);
 		if (success) {
 			return ApiResponse.success("Semantic model created successfully", true);
-		}
-		else {
+		} else {
 			return ApiResponse.error("Failed to create semantic model");
 		}
 	}

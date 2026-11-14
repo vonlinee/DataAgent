@@ -17,13 +17,12 @@ package com.alibaba.cloud.ai.dataagent.service.datasource.impl;
 
 import com.alibaba.cloud.ai.dataagent.bo.schema.ColumnInfoBO;
 import com.alibaba.cloud.ai.dataagent.bo.schema.TableInfoBO;
+import com.alibaba.cloud.ai.dataagent.dto.datasource.DatasourceTableColumnQuery;
 import com.alibaba.cloud.ai.dataagent.mapper.AgentDatasourceTablesMapper;
 import com.alibaba.cloud.ai.dataagent.mapper.DatasourceTableColumnMapper;
 import com.alibaba.cloud.ai.dataagent.service.datasource.DatasourceTableMetadataStore;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -74,9 +73,14 @@ public class DatasourceTableMetadataStoreImpl implements DatasourceTableMetadata
 		}
 	}
 
+	@Override
+	public List<TableInfoBO> findTables(Integer datasourceId) {
+		return tablesMapper.getTableMetadataByDatasourceId(datasourceId);
+	}
+
 	/** Return cached table metadata keyed by normalized schema and table name. */
 	@Override
-	public Map<String, TableInfoBO> findTables(Integer datasourceId) {
+	public Map<String, TableInfoBO> findTablesAsMap(Integer datasourceId) {
 		if (datasourceId == null) {
 			return Collections.emptyMap();
 		}
@@ -87,13 +91,41 @@ public class DatasourceTableMetadataStoreImpl implements DatasourceTableMetadata
 				(existing, ignored) -> existing, LinkedHashMap::new));
 	}
 
-	/** Read initialized columns using both schema and table name to avoid cross-schema collisions. */
 	@Override
-	public List<ColumnInfoBO> findColumns(Integer datasourceId, String tableName, String schemaName) {
-		if (datasourceId == null || StringUtils.isBlank(tableName)) {
+	public List<TableInfoBO> findTableAndColumns(Collection<Integer> dataSourceIds) {
+		if (dataSourceIds == null || dataSourceIds.isEmpty()) {
 			return List.of();
 		}
-		return columnMapper.findByDatasourceAndTable(datasourceId, tableName, schemaName);
+
+		List<TableInfoBO> tablesWithColumns = new ArrayList<>();
+		dataSourceIds.stream()
+				.filter(Objects::nonNull)
+				.distinct()
+				.forEach(dataSourceId -> findTablesAsMap(dataSourceId)
+			.values()
+			.stream()
+			.filter(table -> table != null && StringUtils.isNotBlank(table.getName()))
+			.forEach(table -> {
+				table.setDataSourceId(dataSourceId);
+				List<ColumnInfoBO> columns = findColumns(DatasourceTableColumnQuery.builder()
+					.datasourceId(dataSourceId)
+					.schemaName(table.getSchema())
+					.tableName(table.getName())
+					.build());
+				table.setColumns(columns == null ? List.of() : columns);
+				tablesWithColumns.add(table);
+			}));
+		return tablesWithColumns;
+	}
+
+	/** Read initialized columns using both schema and table name to avoid cross-schema collisions. */
+	@Override
+	public List<ColumnInfoBO> findColumns(DatasourceTableColumnQuery query) {
+		if (query == null) {
+			return List.of();
+		}
+		List<ColumnInfoBO> columns = columnMapper.findByQuery(query);
+		return columns == null ? List.of() : columns;
 	}
 
 	private String tableKey(String schemaName, String tableName) {

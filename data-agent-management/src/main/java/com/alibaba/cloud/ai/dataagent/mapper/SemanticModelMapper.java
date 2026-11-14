@@ -36,6 +36,7 @@ public interface SemanticModelMapper {
 			<where>
 				<if test="query.agentId != null">AND agent_id = #{query.agentId}</if>
 				<if test="query.datasourceId != null">AND datasource_id = #{query.datasourceId}</if>
+				<if test="query.schemaName != null and query.schemaName != ''">AND schema_name = #{query.schemaName}</if>
 				<if test="query.keyword != null and query.keyword != ''">
 					AND (table_name LIKE CONCAT('%', #{query.keyword}, '%')
 						OR column_name LIKE CONCAT('%', #{query.keyword}, '%')
@@ -47,6 +48,18 @@ public interface SemanticModelMapper {
 				<if test="query.columnName != null and query.columnName != ''">AND column_name = #{query.columnName}</if>
 				<if test="query.businessName != null and query.businessName != ''">
 					AND business_name LIKE CONCAT('%', #{query.businessName}, '%')
+				</if>
+				<if test="query.tableNames != null and query.tableNames.size() > 0">
+					AND table_name IN
+					<foreach item='tableName' index='index' collection='query.tableNames' open='(' separator=',' close=')'>
+						#{tableName}
+					</foreach>
+				</if>
+				<if test="query.qualifiedTableNames != null and query.qualifiedTableNames.size() > 0">
+					AND CONCAT(schema_name, '.', table_name) IN
+					<foreach item='tableName' index='index' collection='query.qualifiedTableNames' open='(' separator=',' close=')'>
+						#{tableName}
+					</foreach>
 				</if>
 				<if test="query.synonyms != null and query.synonyms != ''">
 					AND synonyms LIKE CONCAT('%', #{query.synonyms}, '%')
@@ -134,9 +147,9 @@ public interface SemanticModelMapper {
 
 	@Insert("""
 			INSERT INTO semantic_model
-			(agent_id, datasource_id, table_name, column_name, business_name, synonyms, business_description, column_comment, data_type, created_time, updated_time, status)
+			(agent_id, datasource_id, schema_name, table_name, column_name, business_name, synonyms, business_description, column_comment, data_type, created_time, updated_time, status)
 			VALUES
-			(#{agentId}, #{datasourceId}, #{tableName}, #{columnName}, #{businessName}, #{synonyms}, #{businessDescription}, #{columnComment}, #{dataType}, NOW(), NOW(), #{status})
+			(#{agentId}, #{datasourceId}, COALESCE(#{schemaName}, ''), #{tableName}, #{columnName}, #{businessName}, #{synonyms}, #{businessDescription}, #{columnComment}, #{dataType}, NOW(), NOW(), #{status})
 			""")
 	@Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
 	int insert(SemanticModel model);
@@ -147,6 +160,7 @@ public interface SemanticModelMapper {
 			<set>
 			    <if test="agentId != null">agent_id = #{agentId},</if>
 			    <if test="datasourceId != null">datasource_id = #{datasourceId},</if>
+				<if test="schemaName != null">schema_name = #{schemaName},</if>
 			    <if test="tableName != null">table_name = #{tableName},</if>
 				<if test="columnName != null">column_name = #{columnName},</if>
 				<if test="businessName != null">business_name = #{businessName},</if>

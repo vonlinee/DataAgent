@@ -22,6 +22,13 @@ import java.util.List;
 /** Read-only metadata contract for the datasource table browser. */
 public interface DatasourceMetadataService {
 
+	/**
+	 * 获取数据源的表信息
+	 *
+	 * @param datasourceId 数据源ID
+	 * @return 表信息列表
+	 * @throws Exception Exception
+	 */
 	List<TableInfoBO> getDatasourceTableDetails(Integer datasourceId) throws Exception;
 
 	/** Return table details merged with the metadata captured during initialization. */

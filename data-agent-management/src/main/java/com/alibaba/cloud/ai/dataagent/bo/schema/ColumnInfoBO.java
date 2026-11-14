@@ -26,18 +26,34 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ColumnInfoBO {
 
-	private String name;
+    private String name;
 
-	private String tableName;
+    /**
+     * the schema name.
+     */
+    private String schemaName;
 
-	private String description;
+    private String tableName;
 
-	private String type;
+    private String description;
 
-	private boolean primary;
+    private String type;
 
-	private boolean notnull;
+    private boolean primary;
 
-	private String samples;
+    private boolean notnull;
 
+    private String samples;
+
+    public String getQualifiedTableName() {
+        String result = "";
+        if (this.schemaName != null) {
+            result += this.schemaName + ".";
+        }
+        return result + this.tableName;
+    }
+
+    public String getQualifiedColumnName() {
+        return getQualifiedTableName() + "." + this.name;
+    }
 }

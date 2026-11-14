@@ -44,6 +44,10 @@ public class SemanticModelImportItem {
 	@ExcelProperty(value = "字段名*", index = 1)
 	private String columnName;
 
+	/** 表所属的数据库Schema名称（可选） */
+	@ExcelProperty(value = "Schema名称", index = 8)
+	private String schemaName;
+
 	@NotBlank(message = "业务名称不能为空")
 	@ExcelProperty(value = "业务名称*", index = 2)
 	private String businessName;

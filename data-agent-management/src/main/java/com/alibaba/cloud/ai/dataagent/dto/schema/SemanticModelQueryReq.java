@@ -16,6 +16,8 @@
 package com.alibaba.cloud.ai.dataagent.dto.schema;
 
 import java.time.LocalDateTime;
+import java.util.List;
+
 import lombok.Data;
 import org.springframework.format.annotation.DateTimeFormat;
 
@@ -34,8 +36,21 @@ public class SemanticModelQueryReq {
 	/** 数据源ID，精确筛选。 */
 	private Integer datasourceId;
 
+	/** Schema name exact filter. */
+	private String schemaName;
+
 	/** 表名，精确筛选。 */
 	private String tableName;
+
+	/**
+	 * 表名列表，精确筛选。
+	 */
+	private List<String> tableNames;
+
+	/**
+	 * 表名列表，精确筛选。
+	 */
+	private List<String> qualifiedTableNames;
 
 	/** 字段名，精确筛选。 */
 	private String columnName;

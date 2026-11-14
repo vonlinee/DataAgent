@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.alibaba.cloud.ai.dataagent.mapper.DatasourceTableColumnMapper">
+    <resultMap id="columnInfoResultMap" type="com.alibaba.cloud.ai.dataagent.bo.schema.ColumnInfoBO">
+        <result property="name" column="column_name"/>
+        <result property="tableName" column="table_name"/>
+        <result property="schemaName" column="schema_name"/>
+        <result property="description" column="column_comment"/>
+        <result property="type" column="data_type"/>
+        <result property="primary" column="is_primary"/>
+        <result property="notnull" column="is_notnull"/>
+        <result property="samples" column="samples"/>
+    </resultMap>
+
+    <delete id="deleteByDatasource">
+        DELETE FROM datasource_table_columns
+        WHERE datasource_id = #{datasourceId}
+    </delete>
+
+    <insert id="insert">
+        INSERT INTO datasource_table_columns
+            (datasource_id, schema_name, table_name, column_name, column_comment, data_type,
+            is_primary, is_notnull, samples, ordinal_position, create_time, update_time)
+        VALUES (#{datasourceId}, #{table.schema}, #{table.name}, #{column.name}, #{column.description},
+            #{column.type}, #{column.primary}, #{column.notnull}, #{column.samples}, #{ordinalPosition}, NOW(), NOW())
+    </insert>
+
+    <select id="findByQuery" parameterType="com.alibaba.cloud.ai.dataagent.dto.datasource.DatasourceTableColumnQuery"
+            resultMap="columnInfoResultMap">
+        SELECT column_name, schema_name, table_name, column_comment, data_type, is_primary, is_notnull, samples
+        FROM datasource_table_columns
+        <where>
+            <if test="datasourceId != null">
+                AND datasource_id = #{datasourceId}
+            </if>
+            <if test="datasourceIds != null and datasourceIds.size() > 0">
+                AND datasource_id IN
+                <foreach collection="datasourceIds" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
+            </if>
+            <if test="schemaName != null and schemaName != ''">
+                AND schema_name = #{schemaName}
+            </if>
+            <if test="schemaNames != null and schemaNames.size() > 0">
+                AND schema_name IN
+                <foreach collection="schemaNames" item="name" open="(" separator="," close=")">
+                    #{name}
+                </foreach>
+            </if>
+            <if test="tableName != null and tableName != ''">
+                AND table_name = #{tableName}
+            </if>
+            <if test="tableNames != null and tableNames.size() > 0">
+                AND table_name IN
+                <foreach collection="tableNames" item="name" open="(" separator="," close=")">
+                    #{name}
+                </foreach>
+            </if>
+            <if test="qualifiedTableNames != null and qualifiedTableNames.size() > 0">
+                AND CONCAT(schema_name, '.', table_name) IN
+                <foreach collection="qualifiedTableNames" item="name" open="(" separator="," close=")">
+                    #{name}
+                </foreach>
+            </if>
+            <if test="tableNameLike != null and tableNameLike != ''">
+                AND table_name LIKE CONCAT('%', #{tableNameLike}, '%')
+            </if>
+            <if test="tableNameLikes != null and tableNameLikes.size() > 0">
+                AND (
+                <foreach collection="tableNameLikes" item="name" separator=" OR ">
+                    table_name LIKE CONCAT('%', #{name}, '%')
+                </foreach>
+                )
+            </if>
+            <if test="columnName != null and columnName != ''">
+                AND column_name = #{columnName}
+            </if>
+            <if test="columnNames != null and columnNames.size() > 0">
+                AND column_name IN
+                <foreach collection="columnNames" item="name" open="(" separator="," close=")">
+                    #{name}
+                </foreach>
+            </if>
+            <if test="columnNameLike != null and columnNameLike != ''">
+                AND column_name LIKE CONCAT('%', #{columnNameLike}, '%')
+            </if>
+            <if test="columnNameLikes != null and columnNameLikes.size() > 0">
+                AND (
+                <foreach collection="columnNameLikes" item="name" separator=" OR ">
+                    column_name LIKE CONCAT('%', #{name}, '%')
+                </foreach>
+                )
+            </if>
+        </where>
+        ORDER BY datasource_id, schema_name, table_name, ordinal_position, id
+    </select>
+
+    <update id="updateColumnComment">
+        UPDATE datasource_table_columns
+        SET column_comment = #{columnComment}, update_time = NOW()
+        WHERE datasource_id = #{datasourceId}
+        AND schema_name = #{schemaName}
+        AND table_name = #{tableName}
+        AND column_name = #{columnName}
+    </update>
+</mapper>

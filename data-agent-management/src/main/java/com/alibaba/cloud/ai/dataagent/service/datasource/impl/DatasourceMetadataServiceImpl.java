@@ -55,6 +55,14 @@ public class DatasourceMetadataServiceImpl implements DatasourceMetadataService 
 
 	private final DatasourceTableMetadataStore metadataStore;
 
+	/**
+	 * Loads table metadata from the datasource and enriches it with configured table
+	 * comments and types.
+	 *
+	 * @param datasourceId datasource identifier
+	 * @return tables with configured comments and types
+	 * @throws Exception if the datasource cannot be loaded or metadata cannot be read
+	 */
 	@Override
 	public List<TableInfoBO> getDatasourceTableDetails(Integer datasourceId) throws Exception {
 		Datasource datasource = datasourceService.getDatasourceById(datasourceId);
@@ -100,7 +108,7 @@ public class DatasourceMetadataServiceImpl implements DatasourceMetadataService 
 
 	@Override
 	public List<TableInfoBO> getInitializedDatasourceTableDetails(Integer datasourceId) throws Exception {
-		Map<String, TableInfoBO> cachedTables = metadataStore.findTables(datasourceId);
+		Map<String, TableInfoBO> cachedTables = metadataStore.findTablesAsMap(datasourceId);
 		return cachedTables.values().stream()
 			.sorted(java.util.Comparator.comparing(TableInfoBO::getName))
 			.toList();

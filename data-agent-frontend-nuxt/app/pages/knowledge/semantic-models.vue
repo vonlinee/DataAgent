@@ -54,6 +54,21 @@ permissions and * limitations under the License. */
 				</v-col>
 				<v-col cols="12" sm="6" lg="3">
 					<v-autocomplete
+						v-model="queryForm.schemaName"
+						:items="filterSchemaOptions"
+						label="Schema"
+						placeholder="All schemas"
+						variant="outlined"
+						density="compact"
+						:loading="filterMetadataLoading"
+						clearable
+						hide-details
+						no-data-text="No matching schemas"
+						@update:model-value="handleFilterSchemaChange"
+					/>
+				</v-col>
+				<v-col cols="12" sm="6" lg="3">
+					<v-autocomplete
 						v-model="queryForm.tableName"
 						:items="filterTableOptions"
 						item-title="name"
@@ -266,6 +281,15 @@ permissions and * limitations under the License. */
 						:title="datasourceLabel(item.datasourceId)"
 					>
 						{{ datasourceLabel(item.datasourceId) }}
+					</span>
+				</template>
+				<!-- eslint-disable-next-line vue/valid-v-slot -->
+				<template #item.schemaName="{ item }">
+					<span
+						class="schema-cell text-truncate d-inline-block"
+						:title="item.schemaName || '-'"
+					>
+						{{ item.schemaName || '-' }}
 					</span>
 				</template>
 				<!-- eslint-disable-next-line vue/valid-v-slot -->
@@ -725,6 +749,7 @@ let metadataRequestId = 0;
 // ——— useCrudPage ———
 const queryForm = reactive<{
 	datasourceId?: number;
+	schemaName: string;
 	tableName: string;
 	columnName: string;
 	businessName: string;
@@ -734,6 +759,7 @@ const queryForm = reactive<{
 	updatedTimeStart: string;
 	updatedTimeEnd: string;
 }>({
+	schemaName: '',
 	tableName: '',
 	columnName: '',
 	businessName: '',
@@ -839,6 +865,7 @@ const {
 	defaultFormFactory: () => ({
 		agentId: agentId.value,
 		tableName: '',
+		schemaName: '',
 		columnName: '',
 		businessName: '',
 		synonyms: '',
@@ -852,6 +879,7 @@ const {
 function buildQuery(): Omit<SemanticModelQuery, 'agentId'> {
 	return {
 		datasourceId: queryForm.datasourceId,
+		schemaName: queryForm.schemaName || undefined,
 		tableName: queryForm.tableName || undefined,
 		columnName: queryForm.columnName || undefined,
 		businessName: queryForm.businessName || undefined,
@@ -874,6 +902,7 @@ function buildQuery(): Omit<SemanticModelQuery, 'agentId'> {
 function resetQuery() {
 	Object.assign(queryForm, {
 		datasourceId: undefined,
+		schemaName: '',
 		tableName: '',
 		columnName: '',
 		businessName: '',
@@ -887,10 +916,36 @@ function resetQuery() {
 }
 
 const filterTableOptions = computed(() => {
-	if (!queryForm.datasourceId) return filterTableMetadata.value;
-	return filterTableMetadata.value.filter(
-		(table) => table.datasourceId === queryForm.datasourceId,
-	);
+	return filterTableMetadata.value.filter((table) => {
+		if (
+			queryForm.datasourceId &&
+			table.datasourceId !== queryForm.datasourceId
+		) {
+			return false;
+		}
+		return !queryForm.schemaName || table.schema === queryForm.schemaName;
+	});
+});
+
+const filterSchemaOptions = computed(() => {
+	const schemas = new Set<string>();
+	filterTableMetadata.value.forEach((table) => {
+		if (
+			table.schema &&
+			(!queryForm.datasourceId || table.datasourceId === queryForm.datasourceId)
+		) {
+			schemas.add(table.schema);
+		}
+	});
+	semanticModelList.value.forEach((model) => {
+		if (
+			model.schemaName &&
+			(!queryForm.datasourceId || model.datasourceId === queryForm.datasourceId)
+		) {
+			schemas.add(model.schemaName);
+		}
+	});
+	return Array.from(schemas).sort((left, right) => left.localeCompare(right));
 });
 
 const filterColumnOptions = computed(() => {
@@ -911,6 +966,7 @@ function loadFilterCandidates() {
 }
 
 async function handleFilterDatasourceChange(datasourceId: number | null) {
+	queryForm.schemaName = '';
 	queryForm.tableName = '';
 	queryForm.columnName = '';
 	filterTableMetadata.value = [];
@@ -936,6 +992,13 @@ async function handleFilterDatasourceChange(datasourceId: number | null) {
 	} finally {
 		filterMetadataLoading.value = false;
 	}
+	void loadSemanticModels();
+}
+
+function handleFilterSchemaChange() {
+	queryForm.tableName = '';
+	queryForm.columnName = '';
+	filterColumnMetadata.value = [];
 	void loadSemanticModels();
 }
 
@@ -985,6 +1048,7 @@ function openCreateDialog() {
 
 const headers = [
 	{ title: '数据源', key: 'datasourceId', width: 180, minWidth: '180px' },
+	{ title: 'Schema', key: 'schemaName', width: 160, minWidth: '160px' },
 	{ title: '表名', key: 'tableName', width: 220, minWidth: '220px' },
 	{ title: '字段名', key: 'columnName', width: 180, minWidth: '180px' },
 	{ title: '业务名称', key: 'businessName', width: 180, minWidth: '180px' },
@@ -1078,6 +1142,7 @@ function clearColumnSelection() {
 
 function clearTableSelection() {
 	modelForm.value.tableName = '';
+	modelForm.value.schemaName = '';
 	clearColumnSelection();
 }
 
@@ -1139,8 +1204,10 @@ function handleDatasourceChange(datasourceId: number | null) {
 function handleTableChange(tableName: string | null) {
 	metadataRequestId++;
 	clearColumnSelection();
+	modelForm.value.schemaName = '';
 	if (!tableName) return;
 	const table = tableOptions.value.find((item) => item.name === tableName);
+	modelForm.value.schemaName = table?.schema || '';
 	if (table) void loadColumnsForTable(table);
 }
 
@@ -1234,6 +1301,7 @@ async function saveModel() {
 	const createData: SemanticModelAddDto = {
 		agentId: agentId.value,
 		datasourceId: modelForm.value.datasourceId,
+		schemaName: modelForm.value.schemaName,
 		tableName: modelForm.value.tableName,
 		columnName: modelForm.value.columnName,
 		businessName: modelForm.value.businessName,
@@ -1338,6 +1406,11 @@ onMounted(() => {
 
 .datasource-cell {
 	max-width: 160px;
+	vertical-align: middle;
+}
+
+.schema-cell {
+	max-width: 140px;
 	vertical-align: middle;
 }
 

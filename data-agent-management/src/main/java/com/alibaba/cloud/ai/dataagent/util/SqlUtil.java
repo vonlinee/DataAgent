@@ -24,9 +24,7 @@ import com.alibaba.cloud.ai.dataagent.enums.BizDataSourceTypeEnum;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * SQL 工具类
@@ -123,5 +121,86 @@ public class SqlUtil {
 
 	public static String quoteIdentifier(String identifier) {
 		return '"' + identifier.replace("\"", "\"\"") + '"';
+	}
+
+	/**
+	 * Groups table names by schema.
+	 * e.g. ["sakila.sales_by_store", "actor"] -> {"sakila": ["sales_by_store"], "": ["actor"]}
+	 *
+	 * @param tableNames    names like "schema.table" or "table"
+	 * @param defaultSchema key used for names without a schema
+	 * @return schema -> list of table names without schema, preserving input order
+	 */
+	public static Map<String, List<String>> groupBySchema(String[] tableNames, String defaultSchema) {
+		Map<String, List<String>> result = new LinkedHashMap<>();
+		if (tableNames == null) return result;
+
+		for (String raw : tableNames) {
+			if (raw == null || raw.trim().isEmpty()) continue;
+
+			String name = raw.trim();
+			int dot = name.lastIndexOf('.');
+			String schema = dot < 0 ? defaultSchema : name.substring(0, dot).trim();
+			String table = dot < 0 ? name : name.substring(dot + 1).trim();
+
+			if (schema == null || schema.isEmpty()) schema = defaultSchema;
+			if (table.isEmpty()) continue;
+
+			result.computeIfAbsent(schema, k -> new ArrayList<>()).add(table);
+		}
+		return result;
+	}
+
+	public static Map<String, List<String>> groupBySchema(String[] tableNames) {
+		return groupBySchema(tableNames, "");
+	}
+
+	/**
+	 * Extracts table names without schema from inputs like "schema.table" or "table".
+	 * e.g. ["sakila.sales_by_store", "actor"] -> ["sales_by_store", "actor"]
+	 *
+	 * @param tableNames names like "schema.table" or "table"
+	 * @return list of table names without schema, preserving input order
+	 */
+	public static List<String> extractTableNames(List<String> tableNames) {
+		List<String> result = new ArrayList<>();
+		if (tableNames == null) return result;
+		for (String raw : tableNames) {
+			if (raw == null || raw.trim().isEmpty()) continue;
+			String name = raw.trim();
+			int dot = name.lastIndexOf('.');
+			String table = dot < 0 ? name : name.substring(dot + 1).trim();
+			if (!table.isEmpty()) result.add(table);
+		}
+		return result;
+	}
+
+	/**
+	 * Extracts table names without schema from inputs like "schema.table" or "table".
+	 * e.g. ["sakila.sales_by_store", "actor"] -> ["actor"]
+	 *
+	 * @param tableNames names like "schema.table" or "table"
+	 * @return list of table names without schema, preserving input order
+	 */
+	public static List<String> extractNoSchemedTableNames(List<String> tableNames) {
+		List<String> result = new ArrayList<>();
+		if (tableNames == null) return result;
+		for (String raw : tableNames) {
+			if (raw == null || raw.trim().isEmpty()) continue;
+			String name = raw.trim();
+			int dot = name.lastIndexOf('.');
+			if (dot < 0) {
+				result.add(name);
+			}
+		}
+		return result;
+	}
+
+	public static String quoteColumnName(String columnName) {
+		String[] columnPart = columnName.split("\\.");
+		if (columnPart.length == 1) {
+			return "`" + columnPart[0] + "`";
+		}
+		return "`" + columnPart[0] + "`.`" + columnPart[1] + "`";
 	}
 }

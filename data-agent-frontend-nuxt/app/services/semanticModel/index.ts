@@ -31,6 +31,8 @@ export interface SemanticModel {
 	agentId: number;
 	/** 关联的数据源 ID */
 	datasourceId?: number;
+	/** 表所属的数据库 Schema 名称 */
+	schemaName?: string;
 	/** 数据库表名 */
 	tableName: string;
 	/** 数据库列名 */
@@ -61,6 +63,8 @@ export interface SemanticModelAddDto {
 	agentId: number;
 	/** 关联的数据源 ID */
 	datasourceId?: number;
+	/** 表所属的数据库 Schema 名称 */
+	schemaName?: string;
 	/** 表名 */
 	tableName: string;
 	/** 列名 */
@@ -85,6 +89,8 @@ export interface SemanticModelQuery {
 	agentId?: number;
 	/** 关联的数据源 ID，精确筛选 */
 	datasourceId?: number;
+	/** 表所属的数据库 Schema 名称，精确筛选 */
+	schemaName?: string;
 	/** 数据库表名，精确筛选 */
 	tableName?: string;
 	/** 数据库列名，精确筛选 */
@@ -109,6 +115,8 @@ export interface SemanticModelQuery {
 export interface SemanticModelImportItem {
 	/** 表名 */
 	tableName: string;
+	/** 表所属的数据库 Schema 名称 */
+	schemaName?: string;
 	/** 列名 */
 	columnName: string;
 	/** 业务名称 */

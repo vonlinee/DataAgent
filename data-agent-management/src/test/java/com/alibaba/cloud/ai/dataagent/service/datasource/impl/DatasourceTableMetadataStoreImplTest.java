@@ -17,6 +17,7 @@ package com.alibaba.cloud.ai.dataagent.service.datasource.impl;
 
 import com.alibaba.cloud.ai.dataagent.bo.schema.ColumnInfoBO;
 import com.alibaba.cloud.ai.dataagent.bo.schema.TableInfoBO;
+import com.alibaba.cloud.ai.dataagent.dto.datasource.DatasourceTableColumnQuery;
 import com.alibaba.cloud.ai.dataagent.mapper.AgentDatasourceTablesMapper;
 import com.alibaba.cloud.ai.dataagent.mapper.DatasourceTableColumnMapper;
 import java.util.List;
@@ -61,9 +62,45 @@ class DatasourceTableMetadataStoreImplTest {
 	void findColumnsReturnsTheInitializationSnapshot() {
 		DatasourceTableMetadataStoreImpl store = new DatasourceTableMetadataStoreImpl(columnMapper, tablesMapper);
 		List<ColumnInfoBO> columns = List.of(ColumnInfoBO.builder().name("id").build());
-		when(columnMapper.findByDatasourceAndTable(7, "users", null)).thenReturn(columns);
+		DatasourceTableColumnQuery query = DatasourceTableColumnQuery.builder()
+			.datasourceId(7)
+			.tableName("users")
+			.build();
+		when(columnMapper.findByQuery(query)).thenReturn(columns);
 
 		assertEquals(columns, store.findColumns(7, "users", null));
+	}
+
+	@Test
+	void findTableAndColumnsAggregatesSnapshotsForEachDatasource() {
+		DatasourceTableMetadataStoreImpl store = new DatasourceTableMetadataStoreImpl(columnMapper, tablesMapper);
+		TableInfoBO users = TableInfoBO.builder().schema("test").name("users").build();
+		TableInfoBO orders = TableInfoBO.builder().schema("test").name("orders").build();
+		ColumnInfoBO userId = ColumnInfoBO.builder().name("id").build();
+		ColumnInfoBO orderId = ColumnInfoBO.builder().name("id").build();
+		when(tablesMapper.getTableMetadataByDatasourceId(7)).thenReturn(List.of(users));
+		when(tablesMapper.getTableMetadataByDatasourceId(8)).thenReturn(List.of(orders));
+		when(columnMapper.findByQuery(DatasourceTableColumnQuery.builder()
+			.datasourceId(7).schemaName("test").tableName("users").build())).thenReturn(List.of(userId));
+		when(columnMapper.findByQuery(DatasourceTableColumnQuery.builder()
+			.datasourceId(8).schemaName("test").tableName("orders").build())).thenReturn(List.of(orderId));
+
+		List<TableInfoBO> result = store.findTableAndColumns(List.of(7, 8, 7));
+
+		assertEquals(List.of(users, orders), result);
+		assertEquals(7, result.get(0).getDataSourceId());
+		assertEquals(List.of(userId), result.get(0).getColumns());
+		assertEquals(8, result.get(1).getDataSourceId());
+		assertEquals(List.of(orderId), result.get(1).getColumns());
+	}
+
+	@Test
+	void findTableAndColumnsReturnsEmptyForNullOrEmptyDatasourceIds() {
+		DatasourceTableMetadataStoreImpl store = new DatasourceTableMetadataStoreImpl(columnMapper, tablesMapper);
+
+		assertEquals(List.of(), store.findTableAndColumns((List<Integer>) null));
+		assertEquals(List.of(), store.findTableAndColumns(List.of()));
+		assertEquals(List.of(), store.findTableAndColumns((Integer) null));
 	}
 
 }

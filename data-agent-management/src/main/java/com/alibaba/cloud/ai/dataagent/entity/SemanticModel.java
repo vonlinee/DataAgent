@@ -47,6 +47,11 @@ public class SemanticModel {
 	private Integer datasourceId;
 
 	/**
+	 * Schema containing the physical table.
+	 */
+	private String schemaName;
+
+	/**
 	 * 关联的表名
 	 */
 	private String tableName;
@@ -106,4 +111,15 @@ public class SemanticModel {
 				columnName, synonyms, businessDescription, dataType);
 	}
 
+	public String getQualifiedTableName() {
+		String result = "";
+		if (this.schemaName != null) {
+			result += this.schemaName + ".";
+		}
+		return result + this.tableName;
+	}
+
+	public String getQualifiedColumnName() {
+		return getQualifiedTableName() + "." + this.columnName;
+	}
 }

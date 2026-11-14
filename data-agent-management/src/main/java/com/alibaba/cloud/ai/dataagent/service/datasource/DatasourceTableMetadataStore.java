@@ -17,6 +17,9 @@ package com.alibaba.cloud.ai.dataagent.service.datasource;
 
 import com.alibaba.cloud.ai.dataagent.bo.schema.ColumnInfoBO;
 import com.alibaba.cloud.ai.dataagent.bo.schema.TableInfoBO;
+import com.alibaba.cloud.ai.dataagent.dto.datasource.DatasourceTableColumnQuery;
+
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -34,14 +37,57 @@ public interface DatasourceTableMetadataStore {
 	/** Remove all metadata captured by earlier initializations for one datasource. */
 	void deleteByDatasource(Integer datasourceId);
 
-	/** Return cached table metadata indexed by normalized schema and table name. */
-	Map<String, TableInfoBO> findTables(Integer datasourceId);
+	/**
+	 * 查询表信息(不包含表的列信息)
+	 */
+	List<TableInfoBO> findTables(Integer datasourceId);
+
+	/**
+	 * 查询表信息(不包含表的列信息)
+	 */
+	Map<String, TableInfoBO> findTablesAsMap(Integer datasourceId);
+
+	/**
+	 * 查询单个数据源的所有表和列信息
+	 *
+	 * @param dataSourceId 数据源ID
+	 * @return 表和列信息
+	 */
+	default List<TableInfoBO> findTableAndColumns(Integer dataSourceId) {
+		return dataSourceId == null ? List.of() : findTableAndColumns(List.of(dataSourceId));
+	}
+
+	/**
+	 * 查询多个数据源的所有表和列信息
+	 *
+	 * @param dataSourceIds 数据源ID列表
+	 * @return 表和列信息
+	 */
+	List<TableInfoBO> findTableAndColumns(Collection<Integer> dataSourceIds);
 
 	/** Backward-compatible lookup for callers that do not have a schema name. */
 	default List<ColumnInfoBO> findColumns(Integer datasourceId, String tableName) {
-		return findColumns(datasourceId, tableName, null);
+		return findColumns(DatasourceTableColumnQuery.builder()
+			.datasourceId(datasourceId)
+			.tableName(tableName)
+			.build());
 	}
 
-	List<ColumnInfoBO> findColumns(Integer datasourceId, String tableName, String schemaName);
+	/**
+	 * Query initialized column metadata with optional datasource, schema, table, and column filters.
+	 *
+	 * @param query optional column metadata filters
+	 * @return matching initialized columns
+	 */
+	List<ColumnInfoBO> findColumns(DatasourceTableColumnQuery query);
+
+	/** Backward-compatible lookup for callers that also provide a schema name. */
+	default List<ColumnInfoBO> findColumns(Integer datasourceId, String tableName, String schemaName) {
+		return findColumns(DatasourceTableColumnQuery.builder()
+			.datasourceId(datasourceId)
+			.tableName(tableName)
+			.schemaName(schemaName)
+			.build());
+	}
 
 }

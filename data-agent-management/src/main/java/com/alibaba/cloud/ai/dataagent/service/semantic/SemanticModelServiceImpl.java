@@ -87,6 +87,7 @@ public class SemanticModelServiceImpl implements SemanticModelService {
 		SemanticModel semanticModel = SemanticModel.builder()
 			.agentId(dto.getAgentId())
 			.datasourceId(datasourceId)
+			.schemaName(dto.getSchemaName() == null ? "" : dto.getSchemaName())
 			.tableName(dto.getTableName())
 			.columnName(dto.getColumnName())
 			.businessName(dto.getBusinessName())
@@ -182,6 +183,9 @@ public class SemanticModelServiceImpl implements SemanticModelService {
 					existing.setBusinessDescription(item.getBusinessDescription());
 					existing.setColumnComment(item.getColumnComment());
 					existing.setDataType(item.getDataType());
+					if (item.getSchemaName() != null) {
+						existing.setSchemaName(item.getSchemaName());
+					}
 					semanticModelMapper.updateById(existing);
 					log.info("更新语义模型: agentId={}, tableName={}, columnName={}", dto.getAgentId(), item.getTableName(),
 							item.getColumnName());
@@ -191,6 +195,7 @@ public class SemanticModelServiceImpl implements SemanticModelService {
 					SemanticModel newModel = SemanticModel.builder()
 						.agentId(dto.getAgentId())
 						.datasourceId(datasourceId)
+						.schemaName(item.getSchemaName() == null ? "" : item.getSchemaName())
 						.tableName(item.getTableName())
 						.columnName(item.getColumnName())
 						.businessName(item.getBusinessName())

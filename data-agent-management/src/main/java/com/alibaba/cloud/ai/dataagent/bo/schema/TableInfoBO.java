@@ -28,6 +28,11 @@ import java.util.List;
 @AllArgsConstructor
 public class TableInfoBO {
 
+	/**
+	 * 数据源ID
+	 */
+	private Integer dataSourceId;
+
 	private String schema;
 
 	private String name;
