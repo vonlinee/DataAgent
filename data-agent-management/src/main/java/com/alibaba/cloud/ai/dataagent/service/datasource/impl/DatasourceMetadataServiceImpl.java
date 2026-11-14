@@ -101,38 +101,9 @@ public class DatasourceMetadataServiceImpl implements DatasourceMetadataService 
 	@Override
 	public List<TableInfoBO> getInitializedDatasourceTableDetails(Integer datasourceId) throws Exception {
 		Map<String, TableInfoBO> cachedTables = metadataStore.findTables(datasourceId);
-		List<TableInfoBO> tables;
-		try {
-			// Keep the live table list so users can select newly created tables; cached
-			// metadata is used for comments/types and as an outage fallback.
-			tables = getDatasourceTableDetails(datasourceId);
-		}
-		catch (Exception exception) {
-			if (cachedTables.isEmpty()) {
-				throw exception;
-			}
-			tables = cachedTables.values().stream()
-				.sorted(java.util.Comparator.comparing(TableInfoBO::getName))
-				.toList();
-		}
-		for (TableInfoBO table : tables) {
-			TableInfoBO cached = cachedTables.get(tableKey(table.getSchema(), table.getName()));
-			if (cached == null) {
-				cached = cachedTables.get(tableKey("", table.getName()));
-			}
-			if (cached != null) {
-				if (StringUtils.isNotBlank(cached.getDescription())) {
-					table.setDescription(cached.getDescription());
-				}
-				if (StringUtils.isNotBlank(cached.getType())) {
-					table.setType(cached.getType());
-				}
-				if (StringUtils.isNotBlank(cached.getSchema())) {
-					table.setSchema(cached.getSchema());
-				}
-			}
-		}
-		return tables;
+		return cachedTables.values().stream()
+			.sorted(java.util.Comparator.comparing(TableInfoBO::getName))
+			.toList();
 	}
 
 	private List<TableInfoBO> readTableMetadata(Datasource datasource, DbConfigBO dbConfig, String schemaName) {

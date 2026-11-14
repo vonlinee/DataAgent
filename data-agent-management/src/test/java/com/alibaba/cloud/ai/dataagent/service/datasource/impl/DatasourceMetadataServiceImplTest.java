@@ -30,6 +30,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -52,16 +53,30 @@ class DatasourceMetadataServiceImplTest {
 	private DatasourceTableMetadataStore metadataStore;
 
 	@Test
-	void initializedTableDetailsFallsBackToCacheWhenDatasourceIsUnavailable() throws Exception {
+	void initializedTableDetailsReturnsCachedTables() throws Exception {
 		DatasourceMetadataServiceImpl service = new DatasourceMetadataServiceImpl(datasourceService, accessorFactory,
 			datasourceTypeHandlerRegistry, dbConnectionPoolFactory, metadataStore);
 		TableInfoBO cached = TableInfoBO.builder().schema("public").name("orders").type("TABLE").build();
 		when(metadataStore.findTables(1)).thenReturn(Map.of("public.orders", cached));
-		when(datasourceService.getDatasourceById(1)).thenReturn(null);
 
 		List<TableInfoBO> result = service.getInitializedDatasourceTableDetails(1);
 
 		assertEquals(List.of(cached), result);
+	}
+
+	@Test
+	void initializedTableDetailsReadsOnlyTheMetadataSnapshot() throws Exception {
+		DatasourceMetadataServiceImpl service = new DatasourceMetadataServiceImpl(datasourceService, accessorFactory,
+			datasourceTypeHandlerRegistry, dbConnectionPoolFactory, metadataStore);
+		TableInfoBO cached = TableInfoBO.builder().schema("public").name("orders")
+			.description("订单表").type("TABLE").build();
+		when(metadataStore.findTables(1)).thenReturn(Map.of("public.orders", cached));
+
+		List<TableInfoBO> result = service.getInitializedDatasourceTableDetails(1);
+
+		assertEquals(List.of(cached), result);
+		verify(metadataStore).findTables(1);
+		verifyNoInteractions(datasourceService, accessorFactory, datasourceTypeHandlerRegistry, dbConnectionPoolFactory);
 	}
 
 	@Test

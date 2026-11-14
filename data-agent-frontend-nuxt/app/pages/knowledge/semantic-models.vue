@@ -1,18 +1,11 @@
-/*
- * Copyright 2026 the original author or authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+/* * Copyright 2026 the original author or authors. * * Licensed under the
+Apache License, Version 2.0 (the "License"); * you may not use this file except
+in compliance with the License. * You may obtain a copy of the License at * *
+https://www.apache.org/licenses/LICENSE-2.0 * * Unless required by applicable
+law or agreed to in writing, software * distributed under the License is
+distributed on an "AS IS" BASIS, * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. * See the License for the specific language governing
+permissions and * limitations under the License. */
 
 <template>
 	<section class="page-shell">
@@ -56,6 +49,7 @@
 						density="compact"
 						clearable
 						hide-details
+						@update:model-value="handleFilterDatasourceChange"
 					/>
 				</v-col>
 				<v-col cols="12" sm="6" lg="3">
@@ -72,12 +66,20 @@
 						clearable
 						hide-details
 						no-data-text="暂无匹配的表名"
+						@update:model-value="handleFilterTableChange"
 					>
 						<template #item="{ props, item }">
 							<v-list-item
 								v-bind="props"
 								:title="item.raw.name"
-								:subtitle="item.raw.datasourceName"
+								:subtitle="
+									[
+										item.raw.description || '暂无表注释',
+										item.raw.datasourceName,
+									]
+										.filter(Boolean)
+										.join(' · ')
+								"
 							/>
 						</template>
 					</v-autocomplete>
@@ -102,7 +104,11 @@
 								v-bind="props"
 								:title="item.raw.name"
 								:subtitle="
-									[item.raw.datasourceName, item.raw.tableName]
+									[
+										item.raw.description || '暂无列注释',
+										item.raw.datasourceName,
+										item.raw.tableName,
+									]
 										.filter(Boolean)
 										.join(' · ')
 								"
@@ -457,7 +463,13 @@
 										<v-list-item
 											v-bind="props"
 											:title="item.raw.name"
-											:subtitle="item.raw.schema || '默认 schema'"
+											:subtitle="
+												[
+													item.raw.description || '暂无表注释',
+													item.raw.schema || '默认 schema',
+												]
+													.join(' · ')
+											"
 										/>
 									</template>
 								</v-autocomplete>
@@ -487,7 +499,13 @@
 										<v-list-item
 											v-bind="props"
 											:title="item.raw.name"
-											:subtitle="item.raw.type || '未知类型'"
+											:subtitle="
+												[
+													item.raw.description || '暂无列注释',
+													item.raw.type || '未知类型',
+												]
+													.join(' · ')
+											"
 										/>
 									</template>
 								</v-autocomplete>
@@ -876,62 +894,79 @@ const filterTableOptions = computed(() => {
 });
 
 const filterColumnOptions = computed(() => {
-	if (!queryForm.datasourceId) return filterColumnMetadata.value;
-	return filterColumnMetadata.value.filter(
-		(column) => column.datasourceId === queryForm.datasourceId,
-	);
+	return filterColumnMetadata.value.filter((column) => {
+		if (
+			queryForm.datasourceId &&
+			column.datasourceId !== queryForm.datasourceId
+		) {
+			return false;
+		}
+		return !queryForm.tableName || column.tableName === queryForm.tableName;
+	});
 });
 
-async function loadFilterCandidates() {
+function loadFilterCandidates() {
+	filterTableMetadata.value = [];
+	filterColumnMetadata.value = [];
+}
+
+async function handleFilterDatasourceChange(datasourceId: number | null) {
+	queryForm.tableName = '';
+	queryForm.columnName = '';
+	filterTableMetadata.value = [];
+	filterColumnMetadata.value = [];
+	if (!datasourceId) {
+		void loadSemanticModels();
+		return;
+	}
 	filterMetadataLoading.value = true;
 	try {
-		const datasourceEntries = datasourceList.value.filter(
-			(datasource): datasource is Datasource & { id: number } =>
-				datasource.id !== undefined,
+		const datasource = datasourceList.value.find(
+			(item) => item.id === datasourceId,
 		);
-		const tableGroups = await Promise.all(
-			datasourceEntries.map(async (datasource) => {
-				try {
-					const tables = await datasourceService.getDatasourceTableDetails(
-						datasource.id,
-					);
-					return tables.map((table) => ({
-						...table,
-						datasourceId: datasource.id,
-						datasourceName: datasource.name || '未命名数据源',
-					}));
-				} catch {
-					return [];
-				}
-			}),
-		);
-		const tables = tableGroups.flat();
-		filterTableMetadata.value = tables;
-
-		const columnGroups = await Promise.all(
-			tables.map(async (table) => {
-				try {
-					const columns =
-						await datasourceService.getInitializedTableColumnDetails(
-							table.datasourceId,
-							table.name,
-							table.schema,
-						);
-					return columns.map((column) => ({
-						...column,
-						datasourceId: table.datasourceId,
-						datasourceName: table.datasourceName,
-						tableName: table.name,
-					}));
-				} catch {
-					return [];
-				}
-			}),
-		);
-		filterColumnMetadata.value = columnGroups.flat();
+		const tables =
+			await datasourceService.getInitializedDatasourceTableDetails(
+				datasourceId,
+			);
+		filterTableMetadata.value = tables.map((table) => ({
+			...table,
+			datasourceId,
+			datasourceName: datasource?.name || '未命名数据源',
+		}));
 	} finally {
 		filterMetadataLoading.value = false;
 	}
+	void loadSemanticModels();
+}
+
+async function handleFilterTableChange(tableName: string | null) {
+	queryForm.columnName = '';
+	filterColumnMetadata.value = [];
+	if (!tableName || !queryForm.datasourceId) {
+		void loadSemanticModels();
+		return;
+	}
+	const table = filterTableMetadata.value.find(
+		(item) => item.name === tableName,
+	);
+	if (!table) return;
+	filterMetadataLoading.value = true;
+	try {
+		const columns = await datasourceService.getInitializedTableColumnDetails(
+			table.datasourceId,
+			table.name,
+			table.schema,
+		);
+		filterColumnMetadata.value = columns.map((column) => ({
+			...column,
+			datasourceId: table.datasourceId,
+			datasourceName: table.datasourceName,
+			tableName: table.name,
+		}));
+	} finally {
+		filterMetadataLoading.value = false;
+	}
+	void loadSemanticModels();
 }
 
 const dataTypeOptions = computed(() => {
@@ -1022,7 +1057,7 @@ async function loadDataSources() {
 	datasourceLoading.value = true;
 	try {
 		datasourceList.value = await datasourceService.getAllDatasource();
-		await loadFilterCandidates();
+		loadFilterCandidates();
 	} catch {
 		datasourceList.value = [];
 		filterTableMetadata.value = [];
@@ -1051,7 +1086,9 @@ async function loadTablesForDatasource(datasourceId: number) {
 	tableLoading.value = true;
 	try {
 		const tables =
-			await datasourceService.getDatasourceTableDetails(datasourceId);
+			await datasourceService.getInitializedDatasourceTableDetails(
+				datasourceId,
+			);
 		if (requestId === metadataRequestId) tableOptions.value = tables;
 	} catch {
 		if (requestId === metadataRequestId) {
