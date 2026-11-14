@@ -50,6 +50,7 @@ import com.alibaba.cloud.ai.graph.checkpoint.savers.mysql.MysqlSaver;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import com.knuddels.jtokkit.api.EncodingType;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 import org.springframework.ai.embedding.BatchingStrategy;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -429,7 +430,7 @@ public class DataAgentConfiguration implements DisposableBean {
 			}
 
 			@Override
-			public void releaseTarget(Object target) {
+			public void releaseTarget(@NonNull Object target) {
 				// 无需释放
 			}
 		};
@@ -456,7 +457,7 @@ public class DataAgentConfiguration implements DisposableBean {
 			private final AtomicInteger threadNumber = new AtomicInteger(1);
 
 			@Override
-			public Thread newThread(Runnable r) {
+			public Thread newThread(@NonNull Runnable r) {
 				Thread t = new Thread(r, "db-operation-" + threadNumber.getAndIncrement());
 				t.setDaemon(false);
 				if (t.getPriority() != Thread.NORM_PRIORITY) {

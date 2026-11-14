@@ -30,9 +30,7 @@ import org.springframework.stereotype.Service;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.alibaba.cloud.ai.dataagent.util.ColumnTypeUtil.wrapType;
@@ -203,8 +201,8 @@ public class HiveJdbcDdl extends AbstractJdbcDdl {
 		}
 
 		// 去重
-		Set<String> siSet = sampleInfo.stream().collect(Collectors.toSet());
-		sampleInfo = siSet.stream().collect(Collectors.toList());
+		Set<String> siSet = new HashSet<>(sampleInfo);
+		sampleInfo = new ArrayList<>(siSet);
 		return sampleInfo;
 	}
 

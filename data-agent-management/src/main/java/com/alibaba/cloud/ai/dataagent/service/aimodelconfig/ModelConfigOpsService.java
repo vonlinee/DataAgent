@@ -47,7 +47,7 @@ public class ModelConfigOpsService {
 	 */
 	@Transactional(rollbackFor = Exception.class)
 	public void updateAndRefresh(ModelConfigDTO dto) {
-		ModelConfigDTO currentEmbedding = null;
+		ModelConfigDTO currentEmbedding;
 		if (ModelType.EMBEDDING.getCode().equalsIgnoreCase(dto.getModelType())) {
 			currentEmbedding = modelConfigDataService.getActiveConfigByType(ModelType.EMBEDDING);
 			if (currentEmbedding != null && Objects.equals(currentEmbedding.getId(), dto.getId())) {
@@ -179,7 +179,7 @@ public class ModelConfigOpsService {
 		float[] embedding = tempModel.embed("Test");
 
 		// 3. 校验结果
-		if (embedding == null || embedding.length == 0) {
+		if (embedding.length == 0) {
 			throw new RuntimeException("模型生成的向量为空");
 		}
 		embeddingModelCompatibilityValidator.validateDimension(embedding.length);

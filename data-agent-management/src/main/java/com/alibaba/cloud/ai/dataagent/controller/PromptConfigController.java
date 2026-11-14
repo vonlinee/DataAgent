@@ -18,8 +18,7 @@ package com.alibaba.cloud.ai.dataagent.controller;
 import com.alibaba.cloud.ai.dataagent.dto.prompt.PromptConfigDTO;
 import com.alibaba.cloud.ai.dataagent.entity.UserPromptConfig;
 import com.alibaba.cloud.ai.dataagent.service.prompt.UserPromptService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,14 +31,13 @@ import java.util.Map;
  *
  * @author Makoto
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/prompt-config")
 @CrossOrigin(origins = "*", maxAge = 3600)
 public class PromptConfigController {
 
-	private static final Logger logger = LoggerFactory.getLogger(PromptConfigController.class);
-
-	private final UserPromptService promptConfigService;
+    private final UserPromptService promptConfigService;
 
 	public PromptConfigController(UserPromptService promptConfigService) {
 		this.promptConfigService = promptConfigService;
@@ -52,7 +50,7 @@ public class PromptConfigController {
 	 */
 	@PostMapping("/save")
 	public ResponseEntity<Map<String, Object>> saveConfig(@RequestBody PromptConfigDTO configDTO) {
-		logger.info("保存提示词优化配置请求：{}", configDTO);
+		log.info("保存提示词优化配置请求：{}", configDTO);
 
 		UserPromptConfig savedConfig = promptConfigService.saveOrUpdateConfig(configDTO);
 

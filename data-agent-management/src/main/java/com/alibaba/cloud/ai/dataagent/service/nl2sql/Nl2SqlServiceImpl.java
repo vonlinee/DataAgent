@@ -51,7 +51,7 @@ public class Nl2SqlServiceImpl implements Nl2SqlService {
 
 	@Override
 	public Flux<ChatResponse> performSemanticConsistency(SemanticConsistencyDTO semanticConsistencyDTO) {
-		String semanticConsistencyPrompt = PromptHelper.buildSemanticConsistenPrompt(semanticConsistencyDTO);
+		String semanticConsistencyPrompt = PromptHelper.buildSemanticConsistentPrompt(semanticConsistencyDTO);
 		log.debug("semanticConsistencyPrompt as follows \n {} \n", semanticConsistencyPrompt);
 		return llmService.callUser(semanticConsistencyPrompt, SemanticConsistencyOutputDTO.class);
 	}

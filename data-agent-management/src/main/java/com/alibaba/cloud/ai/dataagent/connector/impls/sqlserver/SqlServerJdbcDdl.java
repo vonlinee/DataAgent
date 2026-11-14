@@ -19,11 +19,10 @@ import com.alibaba.cloud.ai.dataagent.bo.schema.*;
 import com.alibaba.cloud.ai.dataagent.enums.BizDataSourceTypeEnum;
 import com.alibaba.cloud.ai.dataagent.connector.SqlExecutor;
 import com.alibaba.cloud.ai.dataagent.connector.ddl.AbstractJdbcDdl;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.compress.utils.Lists;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.sql.Connection;
@@ -37,14 +36,13 @@ import static com.alibaba.cloud.ai.dataagent.util.ColumnTypeUtil.wrapType;
 
 /**
  * @author zihen
- * @date 2025/12/14 17:34
+ * @since  2025/12/14 17:34
  */
+@Slf4j
 @Service
 public class SqlServerJdbcDdl extends AbstractJdbcDdl {
 
-	private static final Logger log = LoggerFactory.getLogger(SqlServerJdbcDdl.class);
-
-	@Override
+    @Override
 	public List<DatabaseInfoBO> showDatabases(Connection connection) {
 		String sql = "SELECT name FROM sys.databases WHERE database_id > 4;";
 		List<DatabaseInfoBO> databaseInfoList = Lists.newArrayList();

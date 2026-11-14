@@ -38,9 +38,8 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * @author zihenzzz
- * @date 2026/2/16 13:55
+ * @since  2026/2/16 13:55
  */
-
 @Slf4j
 @Data
 @Configuration

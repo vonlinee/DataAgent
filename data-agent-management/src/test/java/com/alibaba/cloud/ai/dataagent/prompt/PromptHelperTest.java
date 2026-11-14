@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -43,7 +44,7 @@ class PromptHelperTest {
 		TableDTO table = new TableDTO();
 		table.setName("users");
 		table.setDescription("User table");
-		table.setPrimaryKeys(Arrays.asList("id"));
+		table.setPrimaryKeys(List.of("id"));
 
 		ColumnDTO col1 = new ColumnDTO();
 		col1.setName("id");
@@ -57,7 +58,7 @@ class PromptHelperTest {
 		col2.setData(Arrays.asList("Alice", "Bob", "Charlie"));
 
 		table.setColumn(Arrays.asList(col1, col2));
-		schema.setTable(Arrays.asList(table));
+		schema.setTable(List.of(table));
 
 		return schema;
 	}
@@ -135,7 +136,7 @@ class PromptHelperTest {
 	@Test
 	void buildMixMacSqlDbPrompt_withForeignKeys_includesForeignKeys() {
 		SchemaDTO schema = createTestSchema();
-		schema.setForeignKeys(Arrays.asList("users.id = orders.user_id"));
+		schema.setForeignKeys(List.of("users.id = orders.user_id"));
 		String result = PromptHelper.buildMixMacSqlDbPrompt(schema, true);
 
 		assertTrue(result.contains("Foreign keys"));
@@ -147,13 +148,13 @@ class PromptHelperTest {
 		TableDTO table = new TableDTO();
 		table.setName("users");
 		table.setDescription("User table");
-		table.setPrimaryKeys(Arrays.asList("id"));
+		table.setPrimaryKeys(List.of("id"));
 
 		ColumnDTO col = new ColumnDTO();
 		col.setName("id");
 		col.setType("bigint");
 		col.setDescription("Primary key");
-		table.setColumn(Arrays.asList(col));
+		table.setColumn(List.of(col));
 
 		String result = PromptHelper.buildMixMacSqlTablePrompt(table, true);
 
@@ -170,7 +171,7 @@ class PromptHelperTest {
 		col.setName("id");
 		col.setType("bigint");
 		col.setDescription("id");
-		table.setColumn(Arrays.asList(col));
+		table.setColumn(List.of(col));
 
 		String result = PromptHelper.buildMixMacSqlTablePrompt(table, true);
 
@@ -189,7 +190,7 @@ class PromptHelperTest {
 		col.setType("varchar");
 		col.setDescription("Status");
 		col.setData(Arrays.asList("active", "inactive", "pending", "deleted"));
-		table.setColumn(Arrays.asList(col));
+		table.setColumn(List.of(col));
 
 		String result = PromptHelper.buildMixMacSqlTablePrompt(table, true);
 
@@ -208,7 +209,7 @@ class PromptHelperTest {
 		col.setType("bigint");
 		col.setDescription("Primary key");
 		col.setData(Arrays.asList("1", "2", "3"));
-		table.setColumn(Arrays.asList(col));
+		table.setColumn(List.of(col));
 
 		String result = PromptHelper.buildMixMacSqlTablePrompt(table, true);
 
@@ -226,7 +227,7 @@ class PromptHelperTest {
 		col.setType("varchar");
 		col.setDescription("Status");
 		col.setData(Arrays.asList("", ""));
-		table.setColumn(Arrays.asList(col));
+		table.setColumn(List.of(col));
 
 		String result = PromptHelper.buildMixMacSqlTablePrompt(table, true);
 
@@ -279,7 +280,7 @@ class PromptHelperTest {
 			.businessName("User Name")
 			.build();
 
-		String result = PromptHelper.buildSemanticModelPrompt(Arrays.asList(model));
+		String result = PromptHelper.buildSemanticModelPrompt(Collections.singletonList(model));
 		assertTrue(result.contains("业务名称: User Name"));
 		assertTrue(result.contains("表名: users"));
 		assertTrue(result.contains("数据库字段名: name"));

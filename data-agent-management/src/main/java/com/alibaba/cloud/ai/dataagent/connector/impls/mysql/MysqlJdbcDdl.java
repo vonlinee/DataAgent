@@ -31,9 +31,7 @@ import org.springframework.stereotype.Service;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.alibaba.cloud.ai.dataagent.util.ColumnTypeUtil.wrapType;
@@ -108,7 +106,7 @@ public class MysqlJdbcDdl extends AbstractJdbcDdl {
 		String sql = "SELECT TABLE_NAME, TABLE_COMMENT \n" + "FROM INFORMATION_SCHEMA.TABLES \n"
 				+ "WHERE TABLE_SCHEMA = '%s' \n" + "AND TABLE_NAME in(%s) \n" + "limit 200;";
 		List<TableInfoBO> tableInfoList = Lists.newArrayList();
-		String tableListStr = String.join(", ", tables.stream().map(x -> "'" + x + "'").collect(Collectors.toList()));
+		String tableListStr = tables.stream().map(x -> "'" + x + "'").collect(Collectors.joining(", "));
 		try {
 			String[][] resultArr = SqlExecutor.executeSqlAndReturnArr(connection,
 					String.format(sql, connection.getCatalog(), tableListStr));
@@ -173,7 +171,7 @@ public class MysqlJdbcDdl extends AbstractJdbcDdl {
 				+ "WHERE \n" + "    CONSTRAINT_SCHEMA = '%s' " + "    AND CONSTRAINT_NAME != 'PRIMARY'"
 				+ "    AND TABLE_NAME in(%s)\n" + "    AND REFERENCED_TABLE_NAME in (%s);";
 		List<ForeignKeyInfoBO> foreignKeyInfoList = Lists.newArrayList();
-		String tableListStr = String.join(", ", tables.stream().map(x -> "'" + x + "'").collect(Collectors.toList()));
+		String tableListStr = tables.stream().map(x -> "'" + x + "'").collect(Collectors.joining(", "));
 
 		try {
 			sql = String.format(sql, connection.getCatalog(), tableListStr, tableListStr);
@@ -223,8 +221,8 @@ public class MysqlJdbcDdl extends AbstractJdbcDdl {
 			// throw new RuntimeException(e);
 		}
 
-		Set<String> siSet = sampleInfo.stream().collect(Collectors.toSet());
-		sampleInfo = siSet.stream().collect(Collectors.toList());
+		Set<String> siSet = new HashSet<>(sampleInfo);
+		sampleInfo = new ArrayList<>(siSet);
 		return sampleInfo;
 	}
 

@@ -26,6 +26,7 @@ import org.springframework.stereotype.Service;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -297,8 +298,7 @@ public class OracleJdbcDdl extends AbstractJdbcDdl {
 		}
 
 		// 去重
-		Set<String> siSet = sampleInfo.stream().collect(Collectors.toSet());
-		return siSet.stream().collect(Collectors.toList());
+        return sampleInfo.stream().distinct().collect(Collectors.toList());
 	}
 
 	@Override

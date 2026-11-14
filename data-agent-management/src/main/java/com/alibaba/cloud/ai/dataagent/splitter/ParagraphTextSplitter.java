@@ -72,7 +72,7 @@ public class ParagraphTextSplitter extends TextSplitter {
 				log.debug("Processing large paragraph length: {}", trimmedParagraph.length());
 
 				// 1. 先结算当前缓存区 (Buffer)，确保之前的上下文不丢失
-				if (currentChunk.length() > 0) {
+				if (!currentChunk.isEmpty()) {
 					chunks.add(currentChunk.toString().trim());
 					// 提取 Overlap 留给大段落的开头使用
 					currentChunk = extractOverlap(currentChunk.toString());
@@ -85,13 +85,13 @@ public class ParagraphTextSplitter extends TextSplitter {
 				// 3. 逐个处理子块
 				for (String subChunk : subChunks) {
 					// 检查：Overlap + 当前子块 是否会超限？
-					int potentialLen = currentChunk.length() + (currentChunk.length() > 0 ? 2 : 0) + subChunk.length();
+					int potentialLen = currentChunk.length() + (!currentChunk.isEmpty() ? 2 : 0) + subChunk.length();
 
 					if (potentialLen > chunkSize) {
 						// 如果加上 Overlap 会超限，那也没办法，只能舍弃 Overlap (或者先把 Overlap
 						// 存为一个独立块，但这通常没必要)
 						// 我们选择：强制结算 Overlap (如果有的话)，然后重新开始当前 subChunk
-						if (currentChunk.length() > 0) {
+						if (!currentChunk.isEmpty()) {
 							// 这里通常意味着 Overlap 本身就挺大，或者 subChunk 很大
 							// 为了简单，我们放弃将 Overlap 拼接到这个巨型 subChunk 前面，防止溢出
 							// 而是直接让 subChunk 独立成块
@@ -99,7 +99,7 @@ public class ParagraphTextSplitter extends TextSplitter {
 						}
 					}
 
-					if (currentChunk.length() > 0) {
+					if (!currentChunk.isEmpty()) {
 						currentChunk.append("\n\n");
 					}
 					currentChunk.append(subChunk);
@@ -115,25 +115,25 @@ public class ParagraphTextSplitter extends TextSplitter {
 			// --- 情况 B: 普通段落 (积累处理) ---
 
 			// 计算添加这个段落后的总长度
-			int separatorLength = currentChunk.length() > 0 ? 2 : 0;
+			int separatorLength = !currentChunk.isEmpty() ? 2 : 0;
 			int potentialLength = currentChunk.length() + separatorLength + trimmedParagraph.length();
 
 			// 如果加上当前段落会超过 chunkSize，先保存当前块
-			if (potentialLength > chunkSize && currentChunk.length() > 0) {
+			if (potentialLength > chunkSize && !currentChunk.isEmpty()) {
 				chunks.add(currentChunk.toString().trim());
 				// 提取 overlap 内容作为新块的开始
 				currentChunk = extractOverlap(currentChunk.toString());
 			}
 
 			// 添加当前段落
-			if (currentChunk.length() > 0) {
+			if (!currentChunk.isEmpty()) {
 				currentChunk.append("\n\n");
 			}
 			currentChunk.append(trimmedParagraph);
 		}
 
 		// 处理最后的尾巴
-		if (currentChunk.length() > 0) {
+		if (!currentChunk.isEmpty()) {
 			chunks.add(currentChunk.toString().trim());
 		}
 
@@ -190,7 +190,7 @@ public class ParagraphTextSplitter extends TextSplitter {
 			lastMatchEnd = matcher.end();
 
 			if (sentence.length() > chunkSize) {
-				if (currentChunk.length() > 0) {
+				if (!currentChunk.isEmpty()) {
 					subChunks.add(currentChunk.toString().trim());
 					currentChunk = new StringBuilder();
 				}
@@ -198,7 +198,7 @@ public class ParagraphTextSplitter extends TextSplitter {
 				continue;
 			}
 
-			if (currentChunk.length() + sentence.length() > chunkSize && currentChunk.length() > 0) {
+			if (currentChunk.length() + sentence.length() > chunkSize && !currentChunk.isEmpty()) {
 				subChunks.add(currentChunk.toString().trim());
 				currentChunk = new StringBuilder();
 			}
@@ -209,14 +209,14 @@ public class ParagraphTextSplitter extends TextSplitter {
 			String remaining = paragraph.substring(lastMatchEnd);
 			if (!remaining.trim().isEmpty()) {
 				if (remaining.length() > chunkSize) {
-					if (currentChunk.length() > 0) {
+					if (!currentChunk.isEmpty()) {
 						subChunks.add(currentChunk.toString().trim());
 						currentChunk = new StringBuilder();
 					}
 					subChunks.addAll(splitByChars(remaining));
 				}
 				else {
-					if (currentChunk.length() + remaining.length() > chunkSize && currentChunk.length() > 0) {
+					if (currentChunk.length() + remaining.length() > chunkSize && !currentChunk.isEmpty()) {
 						subChunks.add(currentChunk.toString().trim());
 						currentChunk = new StringBuilder();
 					}
@@ -225,7 +225,7 @@ public class ParagraphTextSplitter extends TextSplitter {
 			}
 		}
 
-		if (currentChunk.length() > 0) {
+		if (!currentChunk.isEmpty()) {
 			subChunks.add(currentChunk.toString().trim());
 		}
 

@@ -52,7 +52,7 @@ public class AgentPresetQuestionServiceImpl implements AgentPresetQuestionServic
 		}
 
 		agentPresetQuestionMapper.insert(question);
-		return question; // ID will be auto-filled by MyBatis
+		return question; // ID will be autofilled by MyBatis
 	}
 
 	@Override

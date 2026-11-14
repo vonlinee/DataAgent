@@ -87,9 +87,9 @@ public class PromptHelper {
 			line.append("(")
 				.append(columnDTO.getName())
 				.append(BooleanUtils.isTrue(withColumnType)
-						? ":" + StringUtils.defaultString(columnDTO.getType(), "").toUpperCase(Locale.ROOT) : "");
+						? ":" + Objects.toString(columnDTO.getType(), "").toUpperCase(Locale.ROOT) : "");
 			if (!StringUtils.equals(columnDTO.getDescription(), columnDTO.getName())) {
-				line.append(", ").append(StringUtils.defaultString(columnDTO.getDescription(), ""));
+				line.append(", ").append(Objects.toString(columnDTO.getDescription(), ""));
 			}
 			if (CollectionUtils.isNotEmpty(tableDTO.getPrimaryKeys())
 					&& tableDTO.getPrimaryKeys().contains(columnDTO.getName())) {
@@ -115,18 +115,13 @@ public class PromptHelper {
 	}
 
 	public static String buildNewSqlGeneratorPrompt(SqlGenerationDTO sqlGenerationDTO) {
-		String schemaInfo = buildMixMacSqlDbPrompt(sqlGenerationDTO.getSchemaDTO(), true);
-		Map<String, Object> params = new HashMap<>();
-		params.put("dialect", sqlGenerationDTO.getDialect());
-		params.put("question", sqlGenerationDTO.getQuery());
-		params.put("schema_info", schemaInfo);
-		params.put("evidence", sqlGenerationDTO.getEvidence());
+		Map<String, Object> params = buildSqlCommonPromptTemplateParams(sqlGenerationDTO);
 		params.put("execution_description", sqlGenerationDTO.getExecutionDescription());
 		params.put("previous_step_results", StringUtils.defaultIfBlank(sqlGenerationDTO.getPreviousStepResults(), "无"));
 		return PromptConstant.getNewSqlGeneratorPromptTemplate().render(params);
 	}
 
-	public static String buildSemanticConsistenPrompt(SemanticConsistencyDTO semanticConsistencyDTO) {
+	public static String buildSemanticConsistentPrompt(SemanticConsistencyDTO semanticConsistencyDTO) {
 		Map<String, Object> params = new HashMap<>();
 		params.put("dialect", semanticConsistencyDTO.getDialect());
 		params.put("execution_description", semanticConsistencyDTO.getExecutionDescription());
@@ -165,19 +160,28 @@ public class PromptHelper {
 	}
 
 	public static String buildSqlErrorFixerPrompt(SqlGenerationDTO sqlGenerationDTO) {
-		String schemaInfo = buildMixMacSqlDbPrompt(sqlGenerationDTO.getSchemaDTO(), true);
+		Map<String, Object> params = buildSqlCommonPromptTemplateParams(sqlGenerationDTO);
+		params.put("error_sql", sqlGenerationDTO.getSql());
+		params.put("error_message", sqlGenerationDTO.getExceptionMessage());
+		params.put("execution_description", sqlGenerationDTO.getExecutionDescription());
+		params.put("previous_step_results", StringUtils.defaultIfBlank(sqlGenerationDTO.getPreviousStepResults(), "无"));
+		return PromptConstant.getSqlErrorFixerPromptTemplate().render(params);
+	}
 
+	/**
+	 * SQL 生成相关的通用提示词模板参数
+	 *
+	 * @param sqlGenerationDTO SQL生辰参数
+	 * @return 模板参数 Map
+	 */
+	private static Map<String, Object> buildSqlCommonPromptTemplateParams(SqlGenerationDTO sqlGenerationDTO) {
+		String schemaInfo = buildMixMacSqlDbPrompt(sqlGenerationDTO.getSchemaDTO(), true);
 		Map<String, Object> params = new HashMap<>();
 		params.put("dialect", sqlGenerationDTO.getDialect());
 		params.put("question", sqlGenerationDTO.getQuery());
 		params.put("schema_info", schemaInfo);
 		params.put("evidence", sqlGenerationDTO.getEvidence());
-		params.put("error_sql", sqlGenerationDTO.getSql());
-		params.put("error_message", sqlGenerationDTO.getExceptionMessage());
-		params.put("execution_description", sqlGenerationDTO.getExecutionDescription());
-		params.put("previous_step_results", StringUtils.defaultIfBlank(sqlGenerationDTO.getPreviousStepResults(), "无"));
-
-		return PromptConstant.getSqlErrorFixerPromptTemplate().render(params);
+		return params;
 	}
 
 	public static String buildBusinessKnowledgePrompt(String businessTerms) {

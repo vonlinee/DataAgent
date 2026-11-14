@@ -33,6 +33,8 @@ import org.springframework.stereotype.Service;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -271,8 +273,8 @@ public class PostgreJdbcDdl extends AbstractJdbcDdl {
 			log.error("sampleColumn error", e);
 		}
 
-		Set<String> siSet = sampleInfo.stream().collect(Collectors.toSet());
-		sampleInfo = siSet.stream().collect(Collectors.toList());
+		Set<String> siSet = new HashSet<>(sampleInfo);
+		sampleInfo = new ArrayList<>(siSet);
 		return sampleInfo;
 	}
 

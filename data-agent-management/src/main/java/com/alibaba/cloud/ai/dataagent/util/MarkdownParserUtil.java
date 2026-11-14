@@ -21,7 +21,9 @@ public class MarkdownParserUtil {
 		String code = extractRawText(markdownCode);
 		// Correctly handle various newline character types: \r\n, \n, \r, but maintain
 		// compatibility with NewLineParser.format()
-		return code.replaceAll("\r\n", " ").replaceAll("\n", " ").replaceAll("\r", " ");
+		return code.replace("\r\n", " ")
+				.replace("\n", " ")
+				.replace("\r", " ");
 	}
 
 	public static String extractRawText(String markdownCode) {
@@ -30,7 +32,7 @@ public class MarkdownParserUtil {
 		int delimiterLength = 0;
 
 		for (int i = 0; i <= markdownCode.length() - 3; i++) {
-			if (markdownCode.substring(i, i + 3).equals("```")) {
+			if (markdownCode.startsWith("```", i)) {
 				startIndex = i;
 				delimiterLength = 3;
 				// Count additional backticks

@@ -52,29 +52,29 @@ public class BusinessKnowledgeServiceImpl implements BusinessKnowledgeService {
 
 	@Override
 	public List<BusinessKnowledgeVO> getKnowledge(Long agentId) {
-		List<BusinessKnowledge> businessKnowledges = businessKnowledgeMapper.selectByAgentId(agentId);
-		if (CollectionUtils.isEmpty(businessKnowledges)) {
+		List<BusinessKnowledge> businessKnowledgeList = businessKnowledgeMapper.selectByAgentId(agentId);
+		if (CollectionUtils.isEmpty(businessKnowledgeList)) {
 			return Collections.emptyList();
 		}
-		return businessKnowledges.stream().map(businessKnowledgeConverter::toVo).toList();
+		return businessKnowledgeList.stream().map(businessKnowledgeConverter::toVo).toList();
 	}
 
 	@Override
 	public List<BusinessKnowledgeVO> getAllKnowledge() {
-		List<BusinessKnowledge> businessKnowledges = businessKnowledgeMapper.selectAll();
-		if (CollectionUtils.isEmpty(businessKnowledges)) {
+		List<BusinessKnowledge> businessKnowledgeList = businessKnowledgeMapper.selectAll();
+		if (CollectionUtils.isEmpty(businessKnowledgeList)) {
 			return Collections.emptyList();
 		}
-		return businessKnowledges.stream().map(businessKnowledgeConverter::toVo).toList();
+		return businessKnowledgeList.stream().map(businessKnowledgeConverter::toVo).toList();
 	}
 
 	@Override
 	public List<BusinessKnowledgeVO> searchKnowledge(Long agentId, String keyword) {
-		List<BusinessKnowledge> businessKnowledges = businessKnowledgeMapper.searchInAgent(agentId, keyword);
-		if (CollectionUtils.isEmpty(businessKnowledges)) {
+		List<BusinessKnowledge> businessKnowledgeList = businessKnowledgeMapper.searchInAgent(agentId, keyword);
+		if (CollectionUtils.isEmpty(businessKnowledgeList)) {
 			return Collections.emptyList();
 		}
-		return businessKnowledges.stream().map(businessKnowledgeConverter::toVo).toList();
+		return businessKnowledgeList.stream().map(businessKnowledgeConverter::toVo).toList();
 	}
 
 	@Override

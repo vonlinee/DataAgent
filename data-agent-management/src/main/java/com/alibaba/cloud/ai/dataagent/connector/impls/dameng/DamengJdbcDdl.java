@@ -28,7 +28,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.alibaba.cloud.ai.dataagent.util.ColumnTypeUtil.wrapType;
@@ -137,11 +136,10 @@ public class DamengJdbcDdl extends AbstractJdbcDdl {
 					.description("")
 					.type(wrapType(resultArr[i][1]))
 					.primary(false)
-					.notnull(BooleanUtils.toBoolean("N".equalsIgnoreCase(resultArr[i][3]) ? "true" : "false"))
+					.notnull(BooleanUtils.toBoolean(Boolean.toString("N".equalsIgnoreCase(resultArr[i][3]))))
 					.build());
 			}
-		}
-		catch (SQLException e) {
+		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
 		return columnInfoList;
@@ -195,13 +193,10 @@ public class DamengJdbcDdl extends AbstractJdbcDdl {
 				}
 				sampleInfo.add(resultArr[i][0]);
 			}
-		}
-		catch (SQLException e) {
+		} catch (SQLException e) {
 			// ignore
 		}
-		Set<String> siSet = sampleInfo.stream().collect(Collectors.toSet());
-		sampleInfo = siSet.stream().collect(Collectors.toList());
-		return sampleInfo;
+		return sampleInfo.stream().distinct().collect(Collectors.toList());
 	}
 
 	@Override
@@ -210,8 +205,7 @@ public class DamengJdbcDdl extends AbstractJdbcDdl {
 		ResultSetBO resultSet = ResultSetBO.builder().build();
 		try {
 			resultSet = SqlExecutor.executeSqlAndReturnObject(connection, schema, sql);
-		}
-		catch (SQLException e) {
+		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
 		return resultSet;
