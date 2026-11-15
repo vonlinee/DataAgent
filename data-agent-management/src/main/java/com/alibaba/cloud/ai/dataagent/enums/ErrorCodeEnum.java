@@ -15,6 +15,8 @@
  */
 package com.alibaba.cloud.ai.dataagent.enums;
 
+import lombok.Getter;
+
 /**
  * Database connection related error code definitions.
  * <p>
@@ -22,6 +24,7 @@ package com.alibaba.cloud.ai.dataagent.enums;
  * information. Can be used as a basic error code module for open source projects,
  * facilitating unified exception handling.
  */
+@Getter
 public enum ErrorCodeEnum {
 
 	/**
@@ -159,14 +162,6 @@ public enum ErrorCodeEnum {
 	@Override
 	public String toString() {
 		return "[" + code + "] " + message;
-	}
-
-	public String getCode() {
-		return code;
-	}
-
-	public String getMessage() {
-		return message;
 	}
 
 }

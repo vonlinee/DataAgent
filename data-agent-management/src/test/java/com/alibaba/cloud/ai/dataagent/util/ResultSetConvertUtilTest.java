@@ -43,7 +43,7 @@ class ResultSetConvertUtilTest {
 		when(rs.getString("id")).thenReturn("1");
 		when(rs.getString("name")).thenReturn("Alice");
 
-		List<String[]> result = ResultSetConvertUtil.convert(rs);
+		List<String[]> result = JdbcUtils.extractTableRows(rs);
 
 		assertEquals(2, result.size());
 		assertArrayEquals(new String[] { "id", "name" }, result.get(0));
@@ -60,7 +60,7 @@ class ResultSetConvertUtilTest {
 		when(rs.getMetaData()).thenReturn(metaData);
 		when(rs.next()).thenReturn(false);
 
-		List<String[]> result = ResultSetConvertUtil.convert(rs);
+		List<String[]> result = JdbcUtils.extractTableRows(rs);
 		assertEquals(1, result.size());
 		assertArrayEquals(new String[] { "col" }, result.get(0));
 	}
@@ -76,7 +76,7 @@ class ResultSetConvertUtilTest {
 		when(rs.next()).thenReturn(true, false);
 		when(rs.getString("col")).thenReturn(null);
 
-		List<String[]> result = ResultSetConvertUtil.convert(rs);
+		List<String[]> result = JdbcUtils.extractTableRows(rs);
 		assertEquals("", result.get(1)[0]);
 	}
 
@@ -91,7 +91,7 @@ class ResultSetConvertUtilTest {
 		when(rs.next()).thenReturn(true, true, true, false);
 		when(rs.getString("id")).thenReturn("1", "2", "3");
 
-		List<String[]> result = ResultSetConvertUtil.convert(rs);
+		List<String[]> result = JdbcUtils.extractTableRows(rs);
 		assertEquals(4, result.size());
 	}
 

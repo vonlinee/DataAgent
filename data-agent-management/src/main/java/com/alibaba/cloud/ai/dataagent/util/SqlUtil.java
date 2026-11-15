@@ -21,10 +21,10 @@ import com.alibaba.druid.sql.ast.SQLStatement;
 import com.alibaba.druid.sql.ast.expr.SQLVariantRefExpr;
 import com.alibaba.druid.sql.visitor.SQLASTVisitorAdapter;
 import com.alibaba.cloud.ai.dataagent.enums.BizDataSourceTypeEnum;
-import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * SQL 工具类
@@ -33,12 +33,13 @@ import java.util.*;
  * @version 1.0
  */
 @Slf4j
-@UtilityClass
-public class SqlUtil {
+public final class SqlUtil {
 
 	private static final String UNRESOLVED_PLACEHOLDER_REASON = "Generated SQL contains an unresolved '?' parameter "
 			+ "placeholder. Replace every placeholder with a concrete value from the current instruction or previous "
 			+ "step results.";
+
+	private SqlUtil() {}
 
 	/**
 	 * 构建SELECT SQL语句
@@ -203,4 +204,8 @@ public class SqlUtil {
 		}
 		return "`" + columnPart[0] + "`.`" + columnPart[1] + "`";
 	}
+
+    public static String getQuotedTablesExpression(List<String> tables) {
+        return tables.stream().map(x -> "'" + x + "'").collect(Collectors.joining(", "));
+    }
 }

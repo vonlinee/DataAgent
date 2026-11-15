@@ -17,9 +17,12 @@ package com.alibaba.cloud.ai.dataagent.connector;
 
 import com.alibaba.cloud.ai.dataagent.bo.schema.ResultSetBO;
 import com.alibaba.cloud.ai.dataagent.enums.DatabaseDialectEnum;
-import com.alibaba.cloud.ai.dataagent.util.ResultSetConvertUtil;
+import com.alibaba.cloud.ai.dataagent.exception.RuntimeSqlException;
+import com.alibaba.cloud.ai.dataagent.util.JdbcUtils;
 import jakarta.annotation.Nullable;
+import org.apache.commons.compress.utils.Lists;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.util.function.ThrowingSupplier;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -27,6 +30,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
+import java.util.function.BiFunction;
 
 /**
  * Responsible for executing SQL and returning structured results.
@@ -54,6 +58,16 @@ public class SqlExecutor {
 				return ResultSetBuilder.buildFrom(rs, schema);
 			}
 		}
+	}
+
+	public static ResultSetBO executeSql(Connection connection, String schema, String sql) {
+        ResultSetBO resultSet;
+		try {
+			resultSet = SqlExecutor.executeSqlAndReturnObject(connection, schema, sql);
+		} catch (SQLException e) {
+			throw new RuntimeSqlException(e);
+		}
+		return resultSet;
 	}
 
 	static void setCurrentSchema(Statement statement, String schema) throws SQLException {
@@ -84,6 +98,47 @@ public class SqlExecutor {
 		return null;
 	}
 
+	public static <T> List<T> executeSqlAndExtract(Connection connection, String sql,
+												   BiFunction<String[], Integer, T> rowMapper) {
+		return mapResult(() -> SqlExecutor.executeSqlAndReturnArr(connection, sql), rowMapper);
+	}
+
+	public static <T> List<T> executeSqlAndExtract(Connection connection, String schema, String sql,
+												   BiFunction<String[], Integer, T> rowMapper) {
+		return mapResult(() -> SqlExecutor.executeSqlAndReturnArr(connection, schema, sql), rowMapper);
+	}
+
+	private static <T> List<T> mapResult(ThrowingSupplier<String[][]> resultSupplier,
+										 BiFunction<String[], Integer, T> rowMapper) {
+		String[][] resultArr;
+		try {
+			resultArr = resultSupplier.get();
+		} catch (Exception e) {
+            throw new RuntimeSqlException(e);
+        }
+		return mapRows(resultArr, rowMapper);
+	}
+
+	private static <T> List<T> mapRows(String[][] resultArr, BiFunction<String[], Integer, T> rowMapper) {
+		List<T> items = Lists.newArrayList();
+		if (resultArr.length <= 1) {
+			return Lists.newArrayList();
+		}
+		// start from 1
+		for (int i = 1; i < resultArr.length; i++) {
+			if (resultArr[i].length == 0) {
+				// column count = 0
+				continue;
+			}
+			T item = rowMapper.apply(resultArr[i], i);
+			if (item == null) {
+				continue;
+			}
+			items.add(item);
+		}
+		return items;
+	}
+
 	/**
 	 * Execute SQL query and return string two-dimensional array format result
 	 * @param connection database connection
@@ -104,8 +159,7 @@ public class SqlExecutor {
 
 	private static List<String[]> executeQuery(Connection connection, String sql) throws SQLException {
 		try (Statement statement = connection.createStatement(); ResultSet rs = statement.executeQuery(sql)) {
-
-			return ResultSetConvertUtil.convert(rs);
+			return JdbcUtils.extractTableRows(rs);
 		}
 	}
 
@@ -118,7 +172,7 @@ public class SqlExecutor {
 		try (Statement statement = connection.createStatement()) {
 			setCurrentSchema(statement, databaseOrSchema);
 			ResultSet rs = statement.executeQuery(sql);
-			List<String[]> result = ResultSetConvertUtil.convert(rs);
+			List<String[]> result = JdbcUtils.extractTableRows(rs);
 			if (dialect.equals(DatabaseDialectEnum.MYSQL.code)) {
 				setCurrentSchema(statement, originalDb);
 			}

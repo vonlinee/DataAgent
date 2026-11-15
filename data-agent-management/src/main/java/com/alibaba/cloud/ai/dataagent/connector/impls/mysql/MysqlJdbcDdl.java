@@ -24,44 +24,20 @@ import com.alibaba.cloud.ai.dataagent.bo.schema.TableInfoBO;
 import com.alibaba.cloud.ai.dataagent.bo.schema.ColumnInfoBO;
 import com.alibaba.cloud.ai.dataagent.bo.schema.ForeignKeyInfoBO;
 import com.alibaba.cloud.ai.dataagent.bo.schema.ResultSetBO;
-import org.apache.commons.compress.utils.Lists;
-import org.apache.commons.lang3.BooleanUtils;
+import com.alibaba.cloud.ai.dataagent.util.JdbcUtils;
+import com.alibaba.cloud.ai.dataagent.util.SqlUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.*;
-import java.util.stream.Collectors;
-
-import static com.alibaba.cloud.ai.dataagent.util.ColumnTypeUtil.wrapType;
 
 @Service
 public class MysqlJdbcDdl extends AbstractJdbcDdl {
 
 	@Override
 	public List<DatabaseInfoBO> showDatabases(Connection connection) {
-		String sql = "show databases;";
-		List<DatabaseInfoBO> databaseInfoList = Lists.newArrayList();
-		try {
-			String[][] resultArr = SqlExecutor.executeSqlAndReturnArr(connection, sql);
-			if (resultArr.length <= 1) {
-				return Lists.newArrayList();
-			}
-
-			for (int i = 1; i < resultArr.length; i++) {
-				if (resultArr[i].length == 0) {
-					continue;
-				}
-				String database = resultArr[i][0];
-				databaseInfoList.add(DatabaseInfoBO.builder().name(database).build());
-			}
-		}
-		catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-
-		return databaseInfoList;
+		return getDatabaseInfoBOS(connection, "show databases;");
 	}
 
 	@Override
@@ -69,174 +45,101 @@ public class MysqlJdbcDdl extends AbstractJdbcDdl {
 		return Collections.emptyList();
 	}
 
-	@Override
-	public List<TableInfoBO> showTables(Connection connection, String schema, String tablePattern) {
-		String sql = "SELECT TABLE_NAME, TABLE_COMMENT \n" + "FROM INFORMATION_SCHEMA.TABLES \n"
-				+ "WHERE TABLE_SCHEMA = '%s' \n";
+	private String getShowTablesSql(Connection connection, String schema, String tablePattern) {
+		String sql = """
+                SELECT TABLE_NAME, TABLE_COMMENT\s
+                FROM INFORMATION_SCHEMA.TABLES\s
+                WHERE TABLE_SCHEMA = '%s'\s
+                """;
 		if (StringUtils.isNotBlank(tablePattern)) {
 			sql += "AND TABLE_NAME LIKE CONCAT('%%','%s','%%') \n";
 		}
 		sql += "limit 2000;";
-		List<TableInfoBO> tableInfoList = Lists.newArrayList();
-		try {
-			String[][] resultArr = SqlExecutor.executeSqlAndReturnArr(connection,
-					String.format(sql, connection.getCatalog(), tablePattern));
-			if (resultArr.length <= 1) {
-				return Lists.newArrayList();
-			}
+        sql = String.format(sql, JdbcUtils.getCatalog(connection), tablePattern);
+        return sql;
+	}
 
-			for (int i = 1; i < resultArr.length; i++) {
-				if (resultArr[i].length == 0) {
-					continue;
-				}
-				String tableName = resultArr[i][0];
-				String tableDesc = resultArr[i][1];
-				tableInfoList.add(TableInfoBO.builder().name(tableName).description(tableDesc).build());
-			}
-		}
-		catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-
-		return tableInfoList;
+	@Override
+	public List<TableInfoBO> showTables(Connection connection, String schema, String tablePattern) {
+		String showTablesSql = getShowTablesSql(connection, schema, tablePattern);
+		return SqlExecutor.executeSqlAndExtract(connection, showTablesSql, (row, rowNum) ->
+				TableInfoBO.builder()
+						.name(row[0])
+						.description(row[1])
+						.build());
 	}
 
 	@Override
 	public List<TableInfoBO> fetchTables(Connection connection, String schema, List<String> tables) {
-		String sql = "SELECT TABLE_NAME, TABLE_COMMENT \n" + "FROM INFORMATION_SCHEMA.TABLES \n"
-				+ "WHERE TABLE_SCHEMA = '%s' \n" + "AND TABLE_NAME in(%s) \n" + "limit 200;";
-		List<TableInfoBO> tableInfoList = Lists.newArrayList();
-		String tableListStr = tables.stream().map(x -> "'" + x + "'").collect(Collectors.joining(", "));
-		try {
-			String[][] resultArr = SqlExecutor.executeSqlAndReturnArr(connection,
-					String.format(sql, connection.getCatalog(), tableListStr));
-			if (resultArr.length <= 1) {
-				return Lists.newArrayList();
-			}
+		String sql = """
+                SELECT TABLE_NAME, TABLE_COMMENT\s
+                FROM INFORMATION_SCHEMA.TABLES\s
+                WHERE TABLE_SCHEMA = '%s'\s
+                AND TABLE_NAME in(%s)\s
+                limit 200;
+                """;
+		String tableListStr = SqlUtil.getQuotedTablesExpression(tables);
+		sql = String.format(sql, JdbcUtils.getCatalog(connection), tableListStr);
 
-			for (int i = 1; i < resultArr.length; i++) {
-				if (resultArr[i].length == 0) {
-					continue;
-				}
-				String tableName = resultArr[i][0];
-				String tableDesc = resultArr[i][1];
-				tableInfoList.add(TableInfoBO.builder().name(tableName).description(tableDesc).build());
-			}
-		}
-		catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-
-		return tableInfoList;
+		return SqlExecutor.executeSqlAndExtract(connection, sql, (row, rowNum) -> {
+			String tableName = row[0];
+			String tableDesc = row[1];
+			return TableInfoBO.builder().name(tableName).description(tableDesc).build();
+		});
 	}
 
 	@Override
 	public List<ColumnInfoBO> showColumns(Connection connection, String schema, String table) {
-		String sql = "SELECT column_name, column_comment, data_type, "
-				+ "IF(column_key='PRI','true','false') AS '主键唯一', \n" + "IF(IS_NULLABLE='NO','true','false') AS '非空' \n"
-				+ "FROM information_schema.COLUMNS " + "WHERE table_schema='%s' " + "and table_name='%s';";
-		List<ColumnInfoBO> columnInfoList = Lists.newArrayList();
-		try {
-			String[][] resultArr = SqlExecutor.executeSqlAndReturnArr(connection, "INFORMATION_SCHEMA",
-					String.format(sql, connection.getCatalog(), table));
-			if (resultArr.length <= 1) {
-				return Lists.newArrayList();
-			}
+		String sql = """
+				SELECT column_name, column_comment, data_type, \
+				IF(column_key='PRI','true','false') AS '主键唯一',\s
+				IF(IS_NULLABLE='NO','true','false') AS '非空'\s
+				FROM information_schema.COLUMNS WHERE table_schema='%s' and table_name='%s';
+				""";
+		sql = String.format(sql, JdbcUtils.getCatalog(connection), table);
 
-			for (int i = 1; i < resultArr.length; i++) {
-				if (resultArr[i].length == 0) {
-					continue;
-				}
-				columnInfoList.add(ColumnInfoBO.builder()
-					.name(resultArr[i][0])
-					.description(resultArr[i][1])
-					.type(wrapType(resultArr[i][2]))
-					.primary(BooleanUtils.toBoolean(resultArr[i][3]))
-					.notnull(BooleanUtils.toBoolean(resultArr[i][4]))
-					.build());
-			}
-		}
-		catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-
-		return columnInfoList;
+		return SqlExecutor.executeSqlAndExtract(connection, "INFORMATION_SCHEMA", sql,
+                super::newColumnInfoFromRow);
 	}
 
 	@Override
 	public List<ForeignKeyInfoBO> showForeignKeys(Connection connection, String schema, List<String> tables) {
-		String sql = "SELECT \n" + "    TABLE_NAME AS '表名',\n" + "    COLUMN_NAME AS '列名',\n"
-				+ "    CONSTRAINT_NAME AS '约束名',\n" + "    REFERENCED_TABLE_NAME AS '引用表名',\n"
-				+ "    REFERENCED_COLUMN_NAME AS '引用列名'\n" + "FROM \n" + "    INFORMATION_SCHEMA.KEY_COLUMN_USAGE\n"
-				+ "WHERE \n" + "    CONSTRAINT_SCHEMA = '%s' " + "    AND CONSTRAINT_NAME != 'PRIMARY'"
-				+ "    AND TABLE_NAME in(%s)\n" + "    AND REFERENCED_TABLE_NAME in (%s);";
-		List<ForeignKeyInfoBO> foreignKeyInfoList = Lists.newArrayList();
-		String tableListStr = tables.stream().map(x -> "'" + x + "'").collect(Collectors.joining(", "));
+		String sql = """
+			SELECT
+				 TABLE_NAME AS '表名',
+				 COLUMN_NAME AS '列名',
+				 CONSTRAINT_NAME AS '约束名',
+				 REFERENCED_TABLE_NAME AS '引用表名',
+				 REFERENCED_COLUMN_NAME AS '引用列名'
+			FROM
+				 INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+			WHERE
+				 CONSTRAINT_SCHEMA = '%s' AND CONSTRAINT_NAME != 'PRIMARY'
+				 AND TABLE_NAME in(%s) AND REFERENCED_TABLE_NAME in (%s);
+			""";
+		String tableListStr = SqlUtil.getQuotedTablesExpression(tables);
+		sql = String.format(sql, JdbcUtils.getCatalog(connection), tableListStr, tableListStr);
 
-		try {
-			sql = String.format(sql, connection.getCatalog(), tableListStr, tableListStr);
-			String[][] resultArr = SqlExecutor.executeSqlAndReturnArr(connection, "INFORMATION_SCHEMA", sql);
-			if (resultArr.length <= 1) {
-				return Lists.newArrayList();
-			}
-
-			for (int i = 1; i < resultArr.length; i++) {
-				if (resultArr[i].length == 0) {
-					continue;
-				}
-				foreignKeyInfoList.add(ForeignKeyInfoBO.builder()
-					.table(resultArr[i][0])
-					.column(resultArr[i][1])
-					.referencedTable(resultArr[i][3])
-					.referencedColumn(resultArr[i][4])
-					.build());
-			}
-		}
-		catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-
-		return foreignKeyInfoList;
+		return SqlExecutor.executeSqlAndExtract(connection, "INFORMATION_SCHEMA", sql,
+                this::newForeignKeyFromRow);
 	}
 
 	@Override
 	public List<String> sampleColumn(Connection connection, String schema, String table, String column) {
-		String sql = "SELECT \n" + "    `%s`\n" + "FROM \n" + "    `%s`\n" + "LIMIT 99;";
-		List<String> sampleInfo = Lists.newArrayList();
-		try {
-			sql = String.format(sql, column, table);
-			String[][] resultArr = SqlExecutor.executeSqlAndReturnArr(connection, null, sql);
-			if (resultArr.length <= 1) {
-				return Lists.newArrayList();
-			}
-
-			for (int i = 1; i < resultArr.length; i++) {
-				if (resultArr[i].length == 0 || column.equalsIgnoreCase(resultArr[i][0])) {
-					continue;
-				}
-				sampleInfo.add(resultArr[i][0]);
-			}
-		}
-		catch (SQLException e) {
-			// throw new RuntimeException(e);
-		}
-
-		Set<String> siSet = new HashSet<>(sampleInfo);
-		sampleInfo = new ArrayList<>(siSet);
-		return sampleInfo;
+		String sql = "SELECT `%s` FROM `%s` LIMIT 99;";
+		return SqlExecutor.executeSqlAndExtract(connection, null, sql,
+				(row, rowNum) -> {
+					if (column.equalsIgnoreCase(row[0])) {
+						return null;
+					}
+					return row[0];
+				});
 	}
 
 	@Override
 	public ResultSetBO scanTable(Connection connection, String schema, String table) {
-		String sql = "SELECT *\n" + "FROM \n" + "    `%s`\n" + "LIMIT 20;";
-		ResultSetBO resultSet = ResultSetBO.builder().build();
-		try {
-			resultSet = SqlExecutor.executeSqlAndReturnObject(connection, schema, String.format(sql, table));
-		}
-		catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-		return resultSet;
+		String sql = String.format("SELECT * FROM `%s` LIMIT 20;", table);
+		return SqlExecutor.executeSql(connection, schema, sql);
 	}
 
 	@Override

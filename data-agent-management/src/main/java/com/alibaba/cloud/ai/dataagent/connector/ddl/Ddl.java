@@ -15,11 +15,31 @@
  */
 package com.alibaba.cloud.ai.dataagent.connector.ddl;
 
+import com.alibaba.cloud.ai.dataagent.bo.schema.*;
 import com.alibaba.cloud.ai.dataagent.enums.BizDataSourceTypeEnum;
+
+import java.sql.Connection;
+import java.util.List;
 
 public interface Ddl {
 
 	BizDataSourceTypeEnum getDataSourceType();
+
+	List<DatabaseInfoBO> showDatabases(Connection connection);
+
+	List<SchemaInfoBO> showSchemas(Connection connection);
+
+	List<TableInfoBO> showTables(Connection connection, String schema, String tablePattern);
+
+	List<TableInfoBO> fetchTables(Connection connection, String schema, List<String> tables);
+
+	List<ColumnInfoBO> showColumns(Connection connection, String schema, String table);
+
+	List<ForeignKeyInfoBO> showForeignKeys(Connection connection, String schema, List<String> tables);
+
+	List<String> sampleColumn(Connection connection, String schema, String table, String column);
+
+	ResultSetBO scanTable(Connection connection, String schema, String table);
 
 	default boolean supportedDataSourceType(String type) {
 		return getDataSourceType().getTypeName().equals(type);

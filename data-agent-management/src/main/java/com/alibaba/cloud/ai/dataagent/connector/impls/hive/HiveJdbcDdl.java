@@ -29,9 +29,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static com.alibaba.cloud.ai.dataagent.util.ColumnTypeUtil.wrapType;
 
@@ -43,27 +41,7 @@ public class HiveJdbcDdl extends AbstractJdbcDdl {
 
 	@Override
 	public List<DatabaseInfoBO> showDatabases(Connection connection) {
-		String sql = "SHOW DATABASES";
-		List<DatabaseInfoBO> databaseInfoList = Lists.newArrayList();
-		try {
-			String[][] resultArr = SqlExecutor.executeSqlAndReturnArr(connection, sql);
-			if (resultArr.length <= 1) {
-				return Lists.newArrayList();
-			}
-
-			for (int i = 1; i < resultArr.length; i++) {
-				if (resultArr[i].length == 0) {
-					continue;
-				}
-				String database = resultArr[i][0];
-				databaseInfoList.add(DatabaseInfoBO.builder().name(database).build());
-			}
-		}
-		catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-
-		return databaseInfoList;
+		return getDatabaseInfoBOS(connection, "SHOW DATABASES");
 	}
 
 	@Override
@@ -71,64 +49,48 @@ public class HiveJdbcDdl extends AbstractJdbcDdl {
 		return Collections.emptyList();
 	}
 
-	@Override
-	public List<TableInfoBO> showTables(Connection connection, String schema, String tablePattern) {
+	private static String getShowTablesSql(String schema, String tablePattern) {
 		StringBuilder sql = new StringBuilder("SHOW TABLES");
-
 		if (StringUtils.isNotBlank(schema)) {
 			sql.append(" IN ").append(schema);
 		}
-
 		if (StringUtils.isNotBlank(tablePattern)) {
 			sql.append(" LIKE '").append(tablePattern).append("'");
 		}
+		return sql.toString();
+	}
 
-		List<TableInfoBO> tableInfoList = Lists.newArrayList();
-		try {
-			String[][] resultArr = SqlExecutor.executeSqlAndReturnArr(connection, sql.toString());
-			if (resultArr.length <= 1) {
-				return Lists.newArrayList();
+	@Override
+	public List<TableInfoBO> showTables(Connection connection, String schema, String tablePattern) {
+		String showTablesSql = getShowTablesSql(schema, tablePattern);
+		return SqlExecutor.executeSqlAndExtract(connection, showTablesSql, (row, rowNum) -> {
+			if (row.length == 0) {
+				return null;
 			}
-
-			for (int i = 1; i < resultArr.length; i++) {
-				if (resultArr[i].length == 0) {
-					continue;
-				}
-				String tableName = resultArr[i][0];
-				tableInfoList.add(TableInfoBO.builder().name(tableName).build());
-			}
-		}
-		catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-
-		return tableInfoList;
+			return TableInfoBO.of(row[0]);
+		});
 	}
 
 	@Override
 	public List<TableInfoBO> fetchTables(Connection connection, String schema, List<String> tables) {
 		List<TableInfoBO> tableInfoList = Lists.newArrayList();
-
 		for (String tableName : tables) {
+			String sql = "DESCRIBE FORMATTED " + (StringUtils.isNotBlank(schema) ? schema + "." : "") + tableName;
 			try {
-				String sql = "DESCRIBE FORMATTED " + (StringUtils.isNotBlank(schema) ? schema + "." : "") + tableName;
-				String[][] resultArr = SqlExecutor.executeSqlAndReturnArr(connection, sql);
-
-				String tableComment = "";
-				for (int i = 1; i < resultArr.length; i++) {
-					if (resultArr[i].length >= 2 && "comment".equalsIgnoreCase(resultArr[i][0].trim())) {
-						tableComment = resultArr[i][1];
-						break;
-					}
-				}
-
-				tableInfoList.add(TableInfoBO.builder().name(tableName).description(tableComment).build());
-			}
-			catch (SQLException e) {
+				List<String> comments = SqlExecutor.executeSqlAndExtract(connection, sql, (row, rowNum) ->
+						row.length >= 2 && "comment".equalsIgnoreCase(row[0].trim()) ? row[1] : null);
+				String tableComment = comments.stream()
+						.filter(StringUtils::isNotBlank)
+						.findFirst()
+						.orElse("");
+				tableInfoList.add(TableInfoBO.builder()
+						.name(tableName)
+						.description(tableComment)
+						.build());
+            } catch (Throwable throwable) {
 				tableInfoList.add(TableInfoBO.builder().name(tableName).build());
 			}
 		}
-
 		return tableInfoList;
 	}
 
@@ -136,41 +98,24 @@ public class HiveJdbcDdl extends AbstractJdbcDdl {
 	public List<ColumnInfoBO> showColumns(Connection connection, String schema, String table) {
 		String fullTableName = StringUtils.isNotBlank(schema) ? schema + "." + table : table;
 		String sql = "DESCRIBE " + fullTableName;
-
-		List<ColumnInfoBO> columnInfoList = Lists.newArrayList();
-		try {
-			String[][] resultArr = SqlExecutor.executeSqlAndReturnArr(connection, sql);
-			if (resultArr.length <= 1) {
-				return Lists.newArrayList();
+		return SqlExecutor.executeSqlAndExtract(connection, sql, (row, rowNum) -> {
+			if (row.length < 2) {
+				return null;
 			}
-
-			for (int i = 1; i < resultArr.length; i++) {
-				if (resultArr[i].length < 2) {
-					continue;
-				}
-
-				String colName = resultArr[i][0];
-				String dataType = resultArr[i][1];
-				String comment = resultArr[i].length >= 3 ? resultArr[i][2] : "";
-
-				if (StringUtils.isBlank(colName) || colName.startsWith("#")) {
-					continue;
-				}
-
-				columnInfoList.add(ColumnInfoBO.builder()
+			String colName = row[0];
+			String dataType = row[1];
+			String comment = row.length >= 3 ? row[2] : "";
+			if (StringUtils.isBlank(colName) || colName.startsWith("#")) {
+				return null;
+			}
+			return ColumnInfoBO.builder()
 					.name(colName)
 					.description(comment)
 					.type(wrapType(dataType))
 					.primary(false) // Hive 不支持主键
 					.notnull(false) // Hive 不强制非空约束
-					.build());
-			}
-		}
-		catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-
-		return columnInfoList;
+					.build();
+		});
 	}
 
 	@Override
@@ -182,43 +127,19 @@ public class HiveJdbcDdl extends AbstractJdbcDdl {
 	public List<String> sampleColumn(Connection connection, String schema, String table, String column) {
 		String fullTableName = StringUtils.isNotBlank(schema) ? schema + "." + table : table;
 		String sql = String.format("SELECT `%s` FROM %s LIMIT 99", column, fullTableName);
-
-		List<String> sampleInfo = Lists.newArrayList();
-		try {
-			String[][] resultArr = SqlExecutor.executeSqlAndReturnArr(connection, null, sql);
-			if (resultArr.length <= 1) {
-				return Lists.newArrayList();
+		return SqlExecutor.executeSqlAndExtract(connection, null, sql, (row, rowNum) -> {
+			if (column.equalsIgnoreCase(row[0])) {
+				return null;
 			}
-
-			for (int i = 1; i < resultArr.length; i++) {
-				if (resultArr[i].length == 0 || column.equalsIgnoreCase(resultArr[i][0])) {
-					continue;
-				}
-				sampleInfo.add(resultArr[i][0]);
-			}
-		}
-		catch (SQLException e) {
-		}
-
-		// 去重
-		Set<String> siSet = new HashSet<>(sampleInfo);
-		sampleInfo = new ArrayList<>(siSet);
-		return sampleInfo;
+			return row[0];
+		});
 	}
 
 	@Override
 	public ResultSetBO scanTable(Connection connection, String schema, String table) {
 		String fullTableName = StringUtils.isNotBlank(schema) ? schema + "." + table : table;
 		String sql = String.format("SELECT * FROM %s LIMIT 20", fullTableName);
-
-		ResultSetBO resultSet = ResultSetBO.builder().build();
-		try {
-			resultSet = SqlExecutor.executeSqlAndReturnObject(connection, schema, sql);
-		}
-		catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-		return resultSet;
+		return SqlExecutor.executeSql(connection, schema, sql);
 	}
 
 	@Override

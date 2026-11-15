@@ -24,271 +24,154 @@ import com.alibaba.cloud.ai.dataagent.bo.schema.TableInfoBO;
 import com.alibaba.cloud.ai.dataagent.connector.ddl.AbstractJdbcDdl;
 import com.alibaba.cloud.ai.dataagent.enums.BizDataSourceTypeEnum;
 import com.alibaba.cloud.ai.dataagent.connector.SqlExecutor;
-import org.apache.commons.compress.utils.Lists;
-import org.apache.commons.lang3.BooleanUtils;
+import com.alibaba.cloud.ai.dataagent.util.SqlUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import static com.alibaba.cloud.ai.dataagent.util.ColumnTypeUtil.wrapType;
 
 /**
  * @author jiuhe
  * @since 2024/3/15
  */
+@Slf4j
 @Service
 public class PostgreJdbcDdl extends AbstractJdbcDdl {
 
-	private static final Logger log = LoggerFactory.getLogger(PostgreJdbcDdl.class);
-
-	@Override
+    @Override
 	public List<DatabaseInfoBO> showDatabases(Connection connection) {
-		String sql = "select datname from pg_database;";
-		List<DatabaseInfoBO> databaseInfoList = Lists.newArrayList();
-		try {
-			String[][] resultArr = SqlExecutor.executeSqlAndReturnArr(connection, sql);
-			if (resultArr.length <= 1) {
-				return Lists.newArrayList();
-			}
-
-			for (int i = 1; i < resultArr.length; i++) {
-				if (resultArr[i].length == 0) {
-					continue;
-				}
-				String database = resultArr[i][0];
-				databaseInfoList.add(DatabaseInfoBO.builder().name(database).build());
-			}
-		}
-		catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-
-		return databaseInfoList;
+		return getDatabaseInfoBOS(connection, "select datname from pg_database;");
 	}
 
 	@Override
 	public List<SchemaInfoBO> showSchemas(Connection connection) {
-		String sql = "SELECT schema_name \n" + "FROM information_schema.schemata;";
-		List<SchemaInfoBO> schemaInfoList = Lists.newArrayList();
-		try {
-			String[][] resultArr = SqlExecutor.executeSqlAndReturnArr(connection, sql);
-			if (resultArr.length <= 1) {
-				return Lists.newArrayList();
-			}
-
-			for (int i = 1; i < resultArr.length; i++) {
-				if (resultArr[i].length == 0) {
-					continue;
-				}
-				String database = resultArr[i][0];
-				schemaInfoList.add(SchemaInfoBO.builder().name(database).build());
-			}
-		}
-		catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-
-		return schemaInfoList;
+		return getSchemaInfoBOS(connection, "SELECT schema_name FROM information_schema.schemata;");
 	}
 
 	@Override
 	public List<TableInfoBO> showTables(Connection connection, String schema, String tablePattern) {
-		String sql = "SELECT tb.table_name, d.description \n" + "FROM information_schema.tables tb \n"
-				+ "JOIN pg_class c ON c.relname = tb.table_name \n"
-				+ "JOIN pg_namespace n ON c.relnamespace = n.oid and tb.table_schema = n.nspname \n"
-				+ "LEFT JOIN pg_description d ON d.objoid = c.oid AND d.objsubid = '0' \n"
-				+ "WHERE tb.table_schema = '%s' \n";
+		String sql = """
+                SELECT tb.table_name, d.description\s
+                FROM information_schema.tables tb\s
+                JOIN pg_class c ON c.relname = tb.table_name\s
+                JOIN pg_namespace n ON c.relnamespace = n.oid and tb.table_schema = n.nspname\s
+                LEFT JOIN pg_description d ON d.objoid = c.oid AND d.objsubid = '0'\s
+                WHERE tb.table_schema = '%s'\s
+                """;
 		if (StringUtils.isNotBlank(tablePattern)) {
 			sql += "AND tb.table_name LIKE CONCAT('%%','%s','%%') \n";
 		}
 		sql += "limit 2000;";
+		sql = String.format(sql, schema, tablePattern);
 
-		List<TableInfoBO> tableInfoList = Lists.newArrayList();
-		try {
-			String[][] resultArr = SqlExecutor.executeSqlAndReturnArr(connection,
-					String.format(sql, schema, tablePattern));
-			if (resultArr.length <= 1) {
-				return Lists.newArrayList();
-			}
-
-			for (int i = 1; i < resultArr.length; i++) {
-				if (resultArr[i].length == 0) {
-					continue;
-				}
-				String tableName = resultArr[i][0];
-				String tableDesc = resultArr[i][1];
-				tableInfoList.add(TableInfoBO.builder().name(tableName).description(tableDesc).build());
-			}
-		}
-		catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-
-		return tableInfoList;
+		return SqlExecutor.executeSqlAndExtract(connection, sql, (row, rowNum) ->
+				TableInfoBO.builder()
+						.name(row[0])
+						.description(row[1])
+						.build());
 	}
 
 	@Override
 	public List<TableInfoBO> fetchTables(Connection connection, String schema, List<String> tables) {
-		String sql = "SELECT tb.table_name, d.description \n" + "FROM information_schema.tables tb \n"
-				+ "JOIN pg_class c ON c.relname = tb.table_name \n"
-				+ "JOIN pg_namespace n ON c.relnamespace = n.oid and tb.table_schema = n.nspname \n"
-				+ "LEFT JOIN pg_description d ON d.objoid = c.oid AND d.objsubid = '0' \n"
-				+ "WHERE tb.table_schema = '%s' \n" + "AND tb.table_name IN (%s) \n" + " limit 2000;";
+		String sql = String.format("""
+                SELECT tb.table_name, d.description\s
+                FROM information_schema.tables tb\s
+                JOIN pg_class c ON c.relname = tb.table_name\s
+                JOIN pg_namespace n ON c.relnamespace = n.oid and tb.table_schema = n.nspname\s
+                LEFT JOIN pg_description d ON d.objoid = c.oid AND d.objsubid = '0'\s
+                WHERE tb.table_schema = '%s'\s
+                AND tb.table_name IN (%s)\s
+                 limit 2000;
+                """, schema, SqlUtil.getQuotedTablesExpression(tables));
 
-		List<TableInfoBO> tableInfoList = Lists.newArrayList();
-		String tableListStr = String.join(", ", tables.stream().map(x -> "'" + x + "'").collect(Collectors.toList()));
-		try {
-			String[][] resultArr = SqlExecutor.executeSqlAndReturnArr(connection,
-					String.format(sql, schema, tableListStr));
-			if (resultArr.length <= 1) {
-				return Lists.newArrayList();
-			}
-
-			for (int i = 1; i < resultArr.length; i++) {
-				if (resultArr[i].length == 0) {
-					continue;
-				}
-				String tableName = resultArr[i][0];
-				String tableDesc = resultArr[i][1];
-				tableInfoList.add(TableInfoBO.builder().name(tableName).description(tableDesc).build());
-			}
-		}
-		catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-
-		return tableInfoList;
+		return SqlExecutor.executeSqlAndExtract(connection, sql, (row, rowNum) ->
+				TableInfoBO.builder()
+						.name(row[0])
+						.description(row[1])
+						.build());
 	}
 
 	@Override
 	public List<ColumnInfoBO> showColumns(Connection connection, String schema, String table) {
-		String sql = "\n" + "SELECT\n" + "    a.attname as column_name,\n"
-				+ "    col_description(a.attrelid, a.attnum) as column_description,\n"
-				+ "    pg_catalog.format_type(a.atttypid, a.atttypmod) as data_type,\n" + "    CASE\n"
-				+ "        WHEN a.attnum = ANY (ind.indkey) THEN true\n" + "        ELSE false\n" + "    END as 主键唯一,\n"
-				+ "     a.attnotnull as 非空\n" + "FROM\n" + "    pg_catalog.pg_attribute a\n" + "LEFT JOIN\n"
-				+ "    pg_catalog.pg_index ind ON ind.indrelid = a.attrelid AND ind.indisprimary\n" + "LEFT JOIN\n"
-				+ "    pg_catalog.pg_class c ON a.attrelid = c.oid\n" + "LEFT JOIN\n"
-				+ "    pg_catalog.pg_namespace n ON n.oid = c.relnamespace\n" + "WHERE\n" + "    c.relname = '%s'\n"
-				+ "    AND a.attnum > 0\n" + "    AND NOT a.attisdropped\n" + "    AND n.nspname = '%s'\n"
-				+ "ORDER BY\n" + "    a.attnum;";
-		List<ColumnInfoBO> columnInfoList = Lists.newArrayList();
-		try {
-			String[][] resultArr = SqlExecutor.executeSqlAndReturnArr(connection, null,
-					String.format(sql, table, schema));
-			if (resultArr.length <= 1) {
-				return Lists.newArrayList();
-			}
+		String sql = String.format("""
+                SELECT
+                    a.attname as column_name,
+                    col_description(a.attrelid, a.attnum) as column_description,
+                    pg_catalog.format_type(a.atttypid, a.atttypmod) as data_type,
+                    CASE
+                        WHEN a.attnum = ANY (ind.indkey) THEN true
+                        ELSE false
+                    END as 主键唯一,
+                    a.attnotnull as 非空
+                FROM pg_catalog.pg_attribute a
+                LEFT JOIN pg_catalog.pg_index ind ON ind.indrelid = a.attrelid AND ind.indisprimary
+                LEFT JOIN pg_catalog.pg_class c ON a.attrelid = c.oid
+                LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+                WHERE
+                    c.relname = '%s' AND a.attnum > 0 AND NOT a.attisdropped AND n.nspname = '%s'
+                ORDER BY a.attnum;""", table, schema);
 
-			for (int i = 1; i < resultArr.length; i++) {
-				if (resultArr[i].length == 0) {
-					continue;
-				}
-				columnInfoList.add(ColumnInfoBO.builder()
-					.name(resultArr[i][0])
-					.description(resultArr[i][1])
-					.type(wrapType(resultArr[i][2]))
-					.primary(BooleanUtils.toBoolean(resultArr[i][3]))
-					.notnull(BooleanUtils.toBoolean(resultArr[i][4]))
-					.build());
-			}
-		}
-		catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-
-		return columnInfoList;
+		return SqlExecutor.executeSqlAndExtract(connection, null, sql, super::newColumnInfoFromRow);
 	}
 
 	@Override
 	public List<ForeignKeyInfoBO> showForeignKeys(Connection connection, String schema, List<String> tables) {
-		String sql = "SELECT\n" + "    tc.table_name,\n" + "    kcu.column_name,\n" + "    tc.constraint_name,\n"
-				+ "    ccu.table_name AS foreign_table_name,\n" + "    ccu.column_name AS foreign_column_name\n"
-				+ "FROM\n" + "    information_schema.table_constraints AS tc\n" + "JOIN\n"
-				+ "    information_schema.key_column_usage AS kcu\n"
-				+ "    ON tc.constraint_name = kcu.constraint_name\n" + "    AND tc.table_schema = kcu.table_schema\n"
-				+ "JOIN\n" + "    information_schema.constraint_column_usage AS ccu\n"
-				+ "    ON ccu.constraint_name = tc.constraint_name\n" + "    AND ccu.table_schema = tc.table_schema\n"
-				+ "WHERE\n" + "    tc.constraint_type = 'FOREIGN KEY'\n" + "    AND tc.table_schema='public'\n"
-				+ "    AND tc.table_name in (%s)";
-		List<ForeignKeyInfoBO> foreignKeyInfoList = Lists.newArrayList();
-		String tableListStr = String.join(", ", tables.stream().map(x -> "'" + x + "'").collect(Collectors.toList()));
+		String sql = String.format("""
+                SELECT
+                    tc.table_name,
+                    kcu.column_name,
+                    tc.constraint_name,
+                    ccu.table_name AS foreign_table_name,
+                    ccu.column_name AS foreign_column_name
+                FROM
+                    information_schema.table_constraints AS tc
+                JOIN
+                    information_schema.key_column_usage AS kcu
+                    ON tc.constraint_name = kcu.constraint_name
+                    AND tc.table_schema = kcu.table_schema
+                JOIN information_schema.constraint_column_usage AS ccu
+                    ON ccu.constraint_name = tc.constraint_name AND ccu.table_schema = tc.table_schema
+                WHERE
+                    tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema='public'
+                    AND tc.table_name in (%s)
+                """, SqlUtil.getQuotedTablesExpression(tables));
 
-		try {
-			sql = String.format(sql, tableListStr);
-			String[][] resultArr = SqlExecutor.executeSqlAndReturnArr(connection, null, sql);
-			if (resultArr.length <= 1) {
-				return Lists.newArrayList();
-			}
-
-			for (int i = 1; i < resultArr.length; i++) {
-				if (resultArr[i].length == 0) {
-					continue;
-				}
-				foreignKeyInfoList.add(ForeignKeyInfoBO.builder()
-					.table(resultArr[i][0])
-					.column(resultArr[i][1])
-					.referencedTable(resultArr[i][3])
-					.referencedColumn(resultArr[i][4])
-					.build());
-			}
-		}
-		catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-
-		return foreignKeyInfoList;
+		return SqlExecutor.executeSqlAndExtract(connection, null, sql,
+				(row, rowNum) -> ForeignKeyInfoBO.builder()
+                .table(row[0])
+                .column(row[1])
+                .referencedTable(row[3])
+                .referencedColumn(row[4])
+                .build());
 	}
 
 	@Override
 	public List<String> sampleColumn(Connection connection, String schema, String table, String column) {
-		String sql = "SELECT \n" + "    \"%s\"\n" + "FROM \n" + "    \"%s\"\n" + "LIMIT 99;";
-		List<String> sampleInfo = Lists.newArrayList();
+		String sql = String.format("""
+                SELECT "%s" FROM "%s" LIMIT 99;
+                """, column, table);
+
 		try {
-			sql = String.format(sql, column, table);
-			String[][] resultArr = SqlExecutor.executeSqlAndReturnArr(connection, schema, sql);
-			if (resultArr.length <= 1) {
-				return Lists.newArrayList();
-			}
-
-			for (int i = 1; i < resultArr.length; i++) {
-				if (resultArr[i].length == 0 || column.equalsIgnoreCase(resultArr[i][0])) {
-					continue;
+			return SqlExecutor.executeSqlAndExtract(connection, schema, sql,
+					(row, rowNum) -> {
+				if (column.equalsIgnoreCase(row[0])) {
+					return null;
 				}
-				sampleInfo.add(resultArr[i][0]);
-			}
+				return row[0];
+			});
+        } catch (Exception e) {
+			log.error("sampleColumn error, sql:{}", sql, e);
 		}
-		catch (SQLException e) {
-			// throw new RuntimeException(e);
-			log.error("sampleColumn error, sql:{}", sql);
-			log.error("sampleColumn error", e);
-		}
-
-		Set<String> siSet = new HashSet<>(sampleInfo);
-		sampleInfo = new ArrayList<>(siSet);
-		return sampleInfo;
+		return new ArrayList<>();
 	}
 
 	@Override
 	public ResultSetBO scanTable(Connection connection, String schema, String table) {
-		String sql = "SELECT *\n" + "FROM \n" + "    %s\n" + "LIMIT 20;";
-		ResultSetBO resultSet = ResultSetBO.builder().build();
-		try {
-			resultSet = SqlExecutor.executeSqlAndReturnObject(connection, schema, String.format(sql, table));
-		}
-		catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-		return resultSet;
+		String sql = "SELECT * FROM %s LIMIT 20;".formatted(table);
+		return SqlExecutor.executeSql(connection, schema, sql);
 	}
 
 	@Override

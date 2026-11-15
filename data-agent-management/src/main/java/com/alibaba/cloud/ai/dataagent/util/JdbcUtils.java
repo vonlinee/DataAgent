@@ -15,6 +15,9 @@
  */
 package com.alibaba.cloud.ai.dataagent.util;
 
+import com.alibaba.cloud.ai.dataagent.exception.RuntimeSqlException;
+
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -24,9 +27,9 @@ import java.util.List;
 /**
  * Convert JDBC ResultSet to structured data
  */
-public class ResultSetConvertUtil {
+public class JdbcUtils {
 
-	public static List<String[]> convert(ResultSet rs) throws SQLException {
+	public static List<String[]> extractTableRows(ResultSet rs) throws SQLException {
 		ResultSetMetaData data = rs.getMetaData();
 		int columnsCount = data.getColumnCount();
 		List<String[]> list = new ArrayList<>();
@@ -42,7 +45,8 @@ public class ResultSetConvertUtil {
 			String[] rowData = new String[columnsCount];
 			int idx = 0;
 			for (String head : rowHead) {
-				rowData[idx++] = rs.getString(head) == null ? "" : rs.getString(head);
+				String columnValue = rs.getString(head);
+				rowData[idx++] = columnValue == null ? "" : columnValue;
 			}
 			list.add(rowData);
 		}
@@ -50,4 +54,11 @@ public class ResultSetConvertUtil {
 		return list;
 	}
 
+    public static String getCatalog(Connection connection) {
+        try {
+            return connection.getCatalog();
+        } catch (SQLException e) {
+            throw new RuntimeSqlException(e);
+        }
+    }
 }

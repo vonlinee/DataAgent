@@ -15,7 +15,7 @@
  */
 package com.alibaba.cloud.ai.dataagent.connector.accessor;
 
-import com.alibaba.cloud.ai.dataagent.connector.ddl.AbstractJdbcDdl;
+import com.alibaba.cloud.ai.dataagent.connector.ddl.Ddl;
 import com.alibaba.cloud.ai.dataagent.connector.pool.DBConnectionPool;
 import com.alibaba.cloud.ai.dataagent.connector.ddl.DdlFactory;
 import com.alibaba.cloud.ai.dataagent.connector.SqlExecutor;
@@ -45,38 +45,26 @@ public abstract class AbstractAccessor implements Accessor {
 
 	private final DBConnectionPool dbConnectionPool;
 
+    @SuppressWarnings("unchecked")
 	public <T> T accessDb(DbConfigBO dbConfig, String method, DbQueryParameter param) throws Exception {
-
 		try (Connection connection = getConnection(dbConfig)) {
-
-			AbstractJdbcDdl ddlExecutor = (AbstractJdbcDdl) ddlFactory.getDdlExecutorByDbConfig(dbConfig);
-
-			switch (method) {
-				case "showDatabases":
-					return (T) ddlExecutor.showDatabases(connection);
-				case "showSchemas":
-					return (T) ddlExecutor.showSchemas(connection);
-				case "showTables":
-					return (T) ddlExecutor.showTables(connection, param.getSchema(), param.getTablePattern());
-				case "fetchTables":
-					return (T) ddlExecutor.fetchTables(connection, param.getSchema(), param.getTables());
-				case "showColumns":
-					return (T) ddlExecutor.showColumns(connection, param.getSchema(), param.getTable());
-				case "showForeignKeys":
-					return (T) ddlExecutor.showForeignKeys(connection, param.getSchema(), param.getTables());
-				case "sampleColumn":
-					return (T) ddlExecutor.sampleColumn(connection, param.getSchema(), param.getTable(),
-							param.getColumn());
-				case "scanTable":
-					return (T) ddlExecutor.scanTable(connection, param.getSchema(), param.getTable());
-				case "executeSqlAndReturnObject":
-					return (T) SqlExecutor.executeSqlAndReturnObject(connection, param.getSchema(), param.getSql());
-				default:
-					throw new UnsupportedOperationException("Unknown method: " + method);
-			}
-		}
-		catch (Exception e) {
-
+			Ddl ddlExecutor = ddlFactory.getDdlExecutorByDbConfig(dbConfig);
+            return switch (method) {
+                case "showDatabases" -> (T) ddlExecutor.showDatabases(connection);
+                case "showSchemas" -> (T) ddlExecutor.showSchemas(connection);
+                case "showTables" -> (T) ddlExecutor.showTables(connection, param.getSchema(), param.getTablePattern());
+                case "fetchTables" -> (T) ddlExecutor.fetchTables(connection, param.getSchema(), param.getTables());
+                case "showColumns" -> (T) ddlExecutor.showColumns(connection, param.getSchema(), param.getTable());
+                case "showForeignKeys" ->
+                        (T) ddlExecutor.showForeignKeys(connection, param.getSchema(), param.getTables());
+                case "sampleColumn" -> (T) ddlExecutor.sampleColumn(connection, param.getSchema(), param.getTable(),
+                        param.getColumn());
+                case "scanTable" -> (T) ddlExecutor.scanTable(connection, param.getSchema(), param.getTable());
+                case "executeSqlAndReturnObject" ->
+                        (T) SqlExecutor.executeSqlAndReturnObject(connection, param.getSchema(), param.getSql());
+                default -> throw new UnsupportedOperationException("Unknown method: " + method);
+            };
+		} catch (Exception e) {
 			log.error("Error accessing database with method: {}, reason: {}", method, e.getMessage());
 			throw e;
 		}

@@ -47,4 +47,7 @@ public class TableInfoBO {
 
 	private List<ColumnInfoBO> columns;
 
+	public static TableInfoBO of(String tableName) {
+		return TableInfoBO.builder().name(tableName).build();
+	}
 }

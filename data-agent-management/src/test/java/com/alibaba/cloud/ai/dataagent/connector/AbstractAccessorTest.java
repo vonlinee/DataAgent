@@ -38,7 +38,6 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -174,9 +173,9 @@ class AbstractAccessorTest {
 		when(ddlFactory.getDdlExecutorByDbConfig(dbConfig)).thenReturn(ddlExecutor);
 		DbQueryParameter param = new DbQueryParameter();
 		param.setSchema("testdb");
-		param.setTables(Arrays.asList("users"));
+		param.setTables(List.of("users"));
 		List<TableInfoBO> expected = new ArrayList<>();
-		when(ddlExecutor.fetchTables(connection, "testdb", Arrays.asList("users"))).thenReturn(expected);
+		when(ddlExecutor.fetchTables(connection, "testdb", List.of("users"))).thenReturn(expected);
 
 		List<TableInfoBO> result = accessor.fetchTables(dbConfig, param);
 		assertSame(expected, result);
@@ -204,9 +203,9 @@ class AbstractAccessorTest {
 		when(ddlFactory.getDdlExecutorByDbConfig(dbConfig)).thenReturn(ddlExecutor);
 		DbQueryParameter param = new DbQueryParameter();
 		param.setSchema("testdb");
-		param.setTables(Arrays.asList("users"));
+		param.setTables(List.of("users"));
 		List<ForeignKeyInfoBO> expected = new ArrayList<>();
-		when(ddlExecutor.showForeignKeys(connection, "testdb", Arrays.asList("users"))).thenReturn(expected);
+		when(ddlExecutor.showForeignKeys(connection, "testdb", List.of("users"))).thenReturn(expected);
 
 		List<ForeignKeyInfoBO> result = accessor.showForeignKeys(dbConfig, param);
 		assertSame(expected, result);

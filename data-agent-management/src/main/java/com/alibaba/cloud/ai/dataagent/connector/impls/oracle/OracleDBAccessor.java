@@ -24,14 +24,12 @@ import org.springframework.stereotype.Service;
 /**
  * @author zihenzzz
  */
-
 @Service("oracleAccessor")
 public class OracleDBAccessor extends AbstractAccessor {
 
 	private final static String ACCESSOR_TYPE = "Oracle_Accessor";
 
 	protected OracleDBAccessor(DdlFactory ddlFactory, DBConnectionPoolFactory poolFactory) {
-
 		super(ddlFactory, poolFactory.getPoolByDbType(BizDataSourceTypeEnum.ORACLE.getTypeName()));
 	}
 
