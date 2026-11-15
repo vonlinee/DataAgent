@@ -36,6 +36,17 @@ curl -X POST "http://127.0.0.1:3000/api/sessions/<sessionId>/messages" \
   -d '{"role":"user","content":"Give me an example","messageType":"text"}'
 ```
 
+#### Batch Delete Sessions
+
+Send an array of session IDs to `DELETE /api/sessions/batch`. The endpoint soft-deletes the sessions and clears their associated chat memory.
+
+```bash
+curl -X DELETE "http://127.0.0.1:3000/api/sessions/batch" \
+  -H "Content-Type: application/json" \\
+  -H "X-API-Key: <your_api_key>" \\
+  -d '["<sessionId1>","<sessionId2>"]'
+```
+
 ### Implement Custom Authentication
 
 If you need to enable API Key authentication in production, you can create an interceptor:

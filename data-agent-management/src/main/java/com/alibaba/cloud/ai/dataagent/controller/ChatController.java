@@ -161,11 +161,9 @@ public class ChatController {
 			if (!StringUtils.hasText(title)) {
 				return ResponseEntity.badRequest().body(ApiResponse.error("标题不能为空"));
 			}
-
 			chatSessionService.renameSession(sessionId, title.trim());
 			return ResponseEntity.ok(ApiResponse.success("会话已重命名"));
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			log.error("Rename session error for session {}: {}", sessionId, e.getMessage(), e);
 			return ResponseEntity.internalServerError().body(ApiResponse.error("重命名失败"));
 		}
@@ -179,10 +177,27 @@ public class ChatController {
 		try {
 			chatSessionService.deleteSession(sessionId);
 			return ResponseEntity.ok(ApiResponse.success("会话已删除"));
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			log.error("Delete session error for session {}: {}", sessionId, e.getMessage(), e);
 			return ResponseEntity.internalServerError().body(ApiResponse.error("删除失败"));
+		}
+	}
+
+	/**
+	 * Delete multiple sessions
+	 */
+	@DeleteMapping("/sessions/batch")
+	public ResponseEntity<ApiResponse> deleteSessions(@RequestBody List<String> sessionIds) {
+		if (sessionIds == null || sessionIds.isEmpty()
+				|| sessionIds.stream().anyMatch(id -> !StringUtils.hasText(id))) {
+			return ResponseEntity.badRequest().body(ApiResponse.error("会话 ID 列表不能为空，且不能包含空值"));
+		}
+		try {
+			chatSessionService.deleteSessions(sessionIds);
+			return ResponseEntity.ok(ApiResponse.success("会话已批量删除"));
+		} catch (Exception e) {
+			log.error("Batch delete sessions error: {}", e.getMessage(), e);
+			return ResponseEntity.internalServerError().body(ApiResponse.error("批量删除失败"));
 		}
 	}
 
@@ -197,18 +212,16 @@ public class ChatController {
 				return ResponseEntity.badRequest().build();
 			}
 			log.debug("Download HTML report for session {}", sessionId);
-			StringBuilder htmlContent = new StringBuilder();
-			htmlContent.append(reportTemplateUtil.getHeader());
-			htmlContent.append(content);
-			htmlContent.append(reportTemplateUtil.getFooter());
+            String htmlContent = reportTemplateUtil.getHeader() +
+                    content +
+                    reportTemplateUtil.getFooter();
 			String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
 			String filename = "report_" + timestamp + ".html";
 			HttpHeaders headers = new HttpHeaders();
 			headers.setContentType(new MediaType("text", "html", StandardCharsets.UTF_8));
 			headers.setContentDispositionFormData("attachment", filename);
-			return ResponseEntity.ok().headers(headers).body(htmlContent.toString().getBytes(StandardCharsets.UTF_8));
-		}
-		catch (Exception e) {
+			return ResponseEntity.ok().headers(headers).body(htmlContent.getBytes(StandardCharsets.UTF_8));
+		} catch (Exception e) {
 			log.error("Download HTML report error for session {}: {}", sessionId, e.getMessage(), e);
 			return ResponseEntity.internalServerError().build();
 		}

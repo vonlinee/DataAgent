@@ -122,6 +122,42 @@ class ChatControllerTest {
 	}
 
 	@Test
+	void deleteSessions_validIds_returns200() {
+		ResponseEntity<ApiResponse> result = chatController.deleteSessions(List.of("uuid-1", "uuid-2"));
+
+		assertEquals(200, result.getStatusCode().value());
+		assertTrue(result.getBody().isSuccess());
+		verify(chatSessionService).deleteSessions(List.of("uuid-1", "uuid-2"));
+	}
+
+	@Test
+	void deleteSessions_emptyIds_returnsBadRequest() {
+		ResponseEntity<ApiResponse> result = chatController.deleteSessions(List.of());
+
+		assertEquals(400, result.getStatusCode().value());
+		assertFalse(result.getBody().isSuccess());
+		verifyNoInteractions(chatSessionService);
+	}
+
+	@Test
+	void deleteSessions_blankId_returnsBadRequest() {
+		ResponseEntity<ApiResponse> result = chatController.deleteSessions(List.of("uuid-1", " "));
+
+		assertEquals(400, result.getStatusCode().value());
+		verifyNoInteractions(chatSessionService);
+	}
+
+	@Test
+	void deleteSessions_serviceThrows_returns500() {
+		doThrow(new RuntimeException("db error")).when(chatSessionService).deleteSessions(List.of("uuid-1"));
+
+		ResponseEntity<ApiResponse> result = chatController.deleteSessions(List.of("uuid-1"));
+
+		assertEquals(500, result.getStatusCode().value());
+		assertFalse(result.getBody().isSuccess());
+	}
+
+	@Test
 	void downloadReport_validContent_returnsHtml() {
 		when(reportTemplateUtil.getHeader()).thenReturn("<html><head></head><body>");
 		when(reportTemplateUtil.getFooter()).thenReturn("</body></html>");

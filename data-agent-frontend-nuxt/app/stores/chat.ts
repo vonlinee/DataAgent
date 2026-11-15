@@ -285,6 +285,24 @@ export const useChatStore = defineStore('chat', () => {
 		}
 	}
 
+	async function removeSessions(sessionIds: string[]) {
+		if (sessionIds.length === 0) return;
+		const response = await chatService.deleteSessions(sessionIds);
+		if (!response.success) throw new Error(response.message || '批量删除失败');
+
+		const deletedIds = new Set(sessionIds);
+		deletedIds.forEach(deleteSessionState);
+		sessions.value = sessions.value.filter(
+			(session) => !deletedIds.has(session.id),
+		);
+		if (currentSession.value && deletedIds.has(currentSession.value.id)) {
+			currentSession.value = null;
+			currentMessages.value = [];
+			isStreaming.value = false;
+			nodeBlocks.value = [];
+		}
+	}
+
 	async function clearSessions(agentId: number) {
 		await chatService.clearAgentSessions(agentId);
 		sessions.value.forEach((s) => deleteSessionState(s.id));
@@ -641,6 +659,7 @@ export const useChatStore = defineStore('chat', () => {
 		renameSession,
 		pinSession,
 		removeSession,
+		removeSessions,
 		clearSessions,
 		sendMessage,
 		stopStreaming,

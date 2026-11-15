@@ -225,6 +225,21 @@ class ChatService {
   }
 
   /**
+   * @description 批量删除指定会话
+   * @param {string[]} sessionIds - 会话 ID 列表
+   * @returns {Promise<ApiResponse>} 操作结果
+   */
+  async deleteSessions(sessionIds: string[]): Promise<ApiResponse> {
+    const response = await axios.delete<ApiResponse>(
+      `${API_BASE_URL}/sessions/batch`,
+      {
+        data: sessionIds,
+      },
+    );
+    return response.data;
+  }
+
+  /**
    * @description 下载会话的 HTML 报告
    * @param {string} sessionId - 会话 ID
    * @param {string} content - 报告内容

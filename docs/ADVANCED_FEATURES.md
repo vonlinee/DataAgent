@@ -36,6 +36,17 @@ curl -X POST "http://127.0.0.1:3000/api/sessions/<sessionId>/messages" \
   -d '{"role":"user","content":"给我一个示例","messageType":"text"}'
 ```
 
+#### 批量删除会话
+
+向 `DELETE /api/sessions/batch` 发送会话 ID 数组。该接口执行软删除，并清理对应的会话记忆。
+
+```bash
+curl -X DELETE "http://127.0.0.1:3000/api/sessions/batch" \
+  -H "Content-Type: application/json" \\
+  -H "X-API-Key: <your_api_key>" \\
+  -d '["<sessionId1>","<sessionId2>"]'
+```
+
 ### 实现自定义鉴权
 
 如需在生产环境启用API Key鉴权，可以创建一个拦截器：

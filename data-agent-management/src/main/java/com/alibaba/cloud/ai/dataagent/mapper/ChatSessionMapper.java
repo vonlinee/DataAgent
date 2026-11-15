@@ -115,6 +115,21 @@ public interface ChatSessionMapper {
 			""")
 	int softDeleteById(@Param("sessionId") String sessionId, @Param("updateTime") LocalDateTime updateTime);
 
+	/**
+	 * Soft delete multiple sessions
+	 */
+	@Update("""
+			<script>
+			UPDATE chat_session
+			SET status = 'deleted', update_time = #{updateTime}
+			WHERE status != 'deleted' AND id IN
+			<foreach collection="sessionIds" item="sessionId" open="(" separator="," close=")">
+				#{sessionId}
+			</foreach>
+			</script>
+			""")
+	int softDeleteByIds(@Param("sessionIds") List<String> sessionIds, @Param("updateTime") LocalDateTime updateTime);
+
 	@Insert("""
 			INSERT INTO chat_session (id, agent_id, title, status, is_pinned, user_id, create_time, update_time)
 			VALUES (#{id}, #{agentId}, #{title}, #{status}, #{isPinned}, #{userId}, #{createTime}, #{updateTime})

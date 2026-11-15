@@ -64,4 +64,9 @@ public interface ChatSessionService {
 	 */
 	void deleteSession(String sessionId);
 
+	/**
+	 * Delete multiple sessions
+	 */
+	void deleteSessions(List<String> sessionIds);
+
 }

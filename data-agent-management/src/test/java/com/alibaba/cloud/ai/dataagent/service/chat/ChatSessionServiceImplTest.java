@@ -158,4 +158,13 @@ class ChatSessionServiceImplTest {
 		verify(chatMemory).clear("session-1");
 	}
 
+	@Test
+	void deleteSessions_callsBatchSoftDeleteAndClearsMemory() {
+		service.deleteSessions(List.of("session-1", "session-2", "session-1"));
+
+		verify(chatSessionMapper).softDeleteByIds(eq(List.of("session-1", "session-2")), any(LocalDateTime.class));
+		verify(chatMemory).clear("session-1");
+		verify(chatMemory).clear("session-2");
+	}
+
 }

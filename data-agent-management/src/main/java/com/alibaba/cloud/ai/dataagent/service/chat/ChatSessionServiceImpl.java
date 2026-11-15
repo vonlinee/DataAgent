@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.UUID;
 
 @Service
@@ -112,6 +113,21 @@ public class ChatSessionServiceImpl implements ChatSessionService {
 		chatSessionMapper.softDeleteById(sessionId, now);
 		chatMemory.clear(sessionId);
 		log.info("Deleted session: {}", sessionId);
+	}
+
+	/**
+	 * Delete multiple sessions
+	 */
+	@Override
+	public void deleteSessions(List<String> sessionIds) {
+		List<String> uniqueSessionIds = List.copyOf(new LinkedHashSet<>(sessionIds));
+		if (uniqueSessionIds.isEmpty()) {
+			return;
+		}
+		LocalDateTime now = LocalDateTime.now();
+		int updated = chatSessionMapper.softDeleteByIds(uniqueSessionIds, now);
+		uniqueSessionIds.forEach(chatMemory::clear);
+		log.info("Deleted {} of {} requested sessions", updated, uniqueSessionIds.size());
 	}
 
 }

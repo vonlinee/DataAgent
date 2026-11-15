@@ -24,30 +24,69 @@
 			<!-- Header -->
 			<div class="sidebar-header">
 				<span class="sidebar-title">历史会话</span>
-				<v-btn
-					icon
-					variant="text"
-					density="compact"
-					size="small"
-					class="toggle-btn"
-					title="折叠侧边栏"
-					@click="store.chatSidebarCollapsed = true"
-				>
-					<v-icon size="18">mdi-chevron-left</v-icon>
-				</v-btn>
+				<div class="sidebar-header-actions">
+					<v-btn
+						icon
+						variant="text"
+						density="compact"
+						size="small"
+						class="toggle-btn"
+						title="折叠侧边栏"
+						@click="store.chatSidebarCollapsed = true"
+					>
+						<v-icon size="18">mdi-chevron-left</v-icon>
+					</v-btn>
+				</div>
 			</div>
 
 			<!-- Session List -->
 			<div class="session-list custom-scrollbar">
-				<div class="session-group-label">最近任务</div>
+				<div class="session-list-toolbar">
+					<span class="session-group-label">最近任务</span>
+					<v-btn
+						v-if="selectionMode"
+						variant="text"
+						size="x-small"
+						:disabled="store.sessions.length === 0 || deletingSessions"
+						@click="toggleSelectAll"
+					>
+						{{ allSessionsSelected ? '取消全选' : '全选' }}
+					</v-btn>
+					<v-btn
+						icon
+						variant="text"
+						size="x-small"
+						class="toggle-btn selection-mode-btn"
+						:aria-label="selectionMode ? '退出选择模式' : '批量选择会话'"
+						:title="selectionMode ? '退出选择模式' : '批量选择会话'"
+						@click="toggleSelectionMode"
+					>
+						<v-icon size="16">{{
+							selectionMode ? 'mdi-close' : 'mdi-checkbox-multiple-marked-outline'
+						}}</v-icon>
+					</v-btn>
+				</div>
 
 				<div
 					v-for="session in store.sessions"
 					:key="session.id"
 					class="session-item"
 					:class="{ active: store.currentSession?.id === session.id }"
-					@click="handleSelectSession(session)"
+					@click="
+						selectionMode
+							? toggleSessionSelection(session.id)
+							: handleSelectSession(session)
+					"
 				>
+					<v-checkbox-btn
+						v-if="selectionMode"
+						:model-value="selectedSessionIds.includes(session.id)"
+						:aria-label="`选择会话 ${session.title || '新会话'}`"
+						:disabled="deletingSessions"
+						class="session-selection-checkbox"
+						@click.stop
+						@update:model-value="toggleSessionSelection(session.id)"
+					/>
 					<template v-if="session.editing">
 						<input
 							v-model="session.editingTitle"
@@ -67,7 +106,7 @@
 								formatTime(session.createTime || session.updateTime) || '—'
 							}}</span>
 						</div>
-						<div class="session-item-actions">
+						<div v-if="!selectionMode" class="session-item-actions">
 							<v-btn
 								icon
 								variant="text"
@@ -115,6 +154,18 @@
 			<!-- Bottom: New Session Button -->
 			<div class="sidebar-bottom">
 				<v-btn
+					v-if="selectionMode"
+					block
+					variant="flat"
+					color="error"
+					prepend-icon="mdi-delete-outline"
+					class="bulk-delete-btn"
+					:disabled="selectedSessionIds.length === 0 || deletingSessions"
+					@click="handleDeleteSelected"
+				>
+					删除已选 ({{ selectedSessionIds.length }})
+				</v-btn>
+				<v-btn
 					block
 					variant="outlined"
 					color="primary"
@@ -145,12 +196,12 @@
 	<!-- Confirm Dialog -->
 	<v-dialog v-model="showDeleteConfirm" max-width="360">
 		<v-card rounded="xl">
-			<v-card-title class="text-subtitle-1 font-weight-bold pa-5 pb-2"
-				>删除会话</v-card-title
-			>
-			<v-card-text class="px-5 text-body-2 text-medium-emphasis"
-				>确定要删除这个会话吗？</v-card-text
-			>
+			<v-card-title class="text-subtitle-1 font-weight-bold pa-5 pb-2">
+				{{ deleteConfirmTitle }}
+			</v-card-title>
+			<v-card-text class="px-5 text-body-2 text-medium-emphasis">
+				{{ deleteConfirmMessage }}
+			</v-card-text>
 			<v-card-actions class="px-5 pb-4 gap-2">
 				<v-spacer />
 				<v-btn
@@ -165,8 +216,9 @@
 					variant="flat"
 					size="small"
 					class="text-none"
+					:disabled="deletingSessions"
 					@click="confirmDelete"
-					>确定</v-btn
+					>{{ deletingSessions ? '删除中…' : '确定' }}</v-btn
 				>
 			</v-card-actions>
 		</v-card>
@@ -174,13 +226,50 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useChatStore, type ExtendedChatSession } from '~/stores/chat';
 import type { ChatSession } from '~/services/chat';
 
 const store = useChatStore();
 const showDeleteConfirm = ref(false);
-let sessionToDelete: ChatSession | null = null;
+const selectionMode = ref(false);
+const selectedSessionIds = ref<string[]>([]);
+const deletingSessions = ref(false);
+const sessionToDelete = ref<ChatSession | null>(null);
+const allSessionsSelected = computed(
+	() =>
+		store.sessions.length > 0 &&
+		store.sessions.every((session) =>
+			selectedSessionIds.value.includes(session.id),
+		),
+);
+const deleteConfirmTitle = computed(() =>
+	sessionToDelete.value
+		? '删除会话'
+		: `删除 ${selectedSessionIds.value.length} 个会话`,
+);
+const deleteConfirmMessage = computed(() =>
+	sessionToDelete.value
+		? '确定要删除这个会话吗？'
+		: `确定要删除选中的 ${selectedSessionIds.value.length} 个会话吗？此操作无法撤销。`,
+);
+
+function toggleSelectionMode() {
+	selectionMode.value = !selectionMode.value;
+	selectedSessionIds.value = [];
+}
+
+function toggleSessionSelection(sessionId: string) {
+	selectedSessionIds.value = selectedSessionIds.value.includes(sessionId)
+		? selectedSessionIds.value.filter((id) => id !== sessionId)
+		: [...selectedSessionIds.value, sessionId];
+}
+
+function toggleSelectAll() {
+	selectedSessionIds.value = allSessionsSelected.value
+		? []
+		: store.sessions.map((session) => session.id);
+}
 
 function formatTime(time: Date | string | undefined): string {
 	if (!time) return '';
@@ -250,19 +339,33 @@ async function handlePin(session: ChatSession) {
 }
 
 function handleDelete(session: ChatSession) {
-	sessionToDelete = session;
+	sessionToDelete.value = session;
+	showDeleteConfirm.value = true;
+}
+
+function handleDeleteSelected() {
+	if (selectedSessionIds.value.length === 0 || deletingSessions.value) return;
 	showDeleteConfirm.value = true;
 }
 
 async function confirmDelete() {
-	if (!sessionToDelete) return;
+	if (!sessionToDelete.value && selectedSessionIds.value.length === 0) return;
 	showDeleteConfirm.value = false;
+	deletingSessions.value = true;
 	try {
-		await store.removeSession(sessionToDelete);
+		if (sessionToDelete.value) {
+			await store.removeSession(sessionToDelete.value);
+		} else {
+			const selectedIds = [...selectedSessionIds.value];
+			await store.removeSessions(selectedIds);
+			toggleSelectionMode();
+		}
 	} catch (e) {
 		console.error('删除会话失败', e);
+	} finally {
+		deletingSessions.value = false;
 	}
-	sessionToDelete = null;
+	sessionToDelete.value = null;
 }
 </script>
 
@@ -313,6 +416,12 @@ async function confirmDelete() {
 	flex-shrink: 0;
 }
 
+.sidebar-header-actions {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
 .sidebar-title {
 	font-size: 13px;
 	font-weight: 600;
@@ -344,6 +453,29 @@ async function confirmDelete() {
 	padding: 8px 8px 6px;
 }
 
+.session-list-toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	min-height: 32px;
+}
+
+.session-list-toolbar .session-group-label {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	min-height: 32px;
+	padding: 0 8px;
+}
+
+.selection-mode-btn {
+	flex-shrink: 0;
+}
+
+.session-list-toolbar :deep(.v-btn) {
+	transform: translateY(-3px);
+}
+
 .session-item {
 	display: flex;
 	align-items: center;
@@ -368,6 +500,10 @@ async function confirmDelete() {
 	flex: 1;
 	min-width: 0;
 	gap: 1px;
+}
+
+.session-selection-checkbox {
+	flex: 0 0 28px;
 }
 
 .session-item-title {
@@ -447,6 +583,11 @@ async function confirmDelete() {
 	font-size: 14px !important;
 	border-style: dashed !important;
 	border-radius: 10px !important;
+}
+
+.bulk-delete-btn {
+	margin-bottom: 8px;
+	text-transform: none;
 }
 
 /* ── Collapsed expand FAB ────────────────────────────────────────────────────── */
