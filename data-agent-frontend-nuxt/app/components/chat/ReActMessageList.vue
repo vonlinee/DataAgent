@@ -18,6 +18,28 @@
 				<v-icon size="16">mdi-lightbulb-outline</v-icon>
 				<span>你可以直接描述目标，我会自主规划下一步。</span>
 			</div>
+			<div v-if="presetQuestions.length" class="preset-questions" aria-label="预设问题">
+				<button
+					v-for="question in visiblePresetQuestions"
+					:key="question.id"
+					type="button"
+					class="preset-question"
+					@click="selectPresetQuestion(question.question)"
+				>
+					<v-icon size="15">mdi-lightbulb-outline</v-icon>
+					<span>{{ question.question }}</span>
+				</button>
+			</div>
+			<v-btn
+				v-if="presetPageCount > 1"
+				class="preset-questions-more"
+				variant="text"
+				color="primary"
+				prepend-icon="mdi-refresh"
+				@click="showNextPresetPage"
+			>
+				换一批
+			</v-btn>
 		</div>
 
 		<div v-else class="messages-column">
@@ -160,6 +182,7 @@
 import {
 	computed,
 	nextTick,
+	onMounted,
 	onUnmounted,
 	ref,
 	watch,
@@ -169,11 +192,27 @@ import DOMPurify from 'dompurify';
 import { renderMarkdownContent } from '~/utils/markdown';
 import { useEchartsRenderer } from '~/composables/useEchartsRenderer';
 import { useReActChatStore } from '~/stores/reactChat';
+import { useChatStore } from '~/stores/chat';
+import presetQuestionService, { type PresetQuestion } from '~/services/presetQuestion';
 import type { ChatMessage } from '~/services/chat';
 import type { ReActStreamEvent } from '~/services/react';
 import ReActThoughtSteps from './ReActThoughtSteps.vue';
 
 const store = useReActChatStore();
+const chatStore = useChatStore();
+const presetQuestions = ref<PresetQuestion[]>([]);
+const presetPage = ref(0);
+const presetPageSize = 6;
+const presetPageCount = computed(() =>
+	Math.ceil(presetQuestions.value.length / presetPageSize),
+);
+const visiblePresetQuestions = computed(() =>
+	presetQuestions.value.slice(
+		presetPage.value * presetPageSize,
+		(presetPage.value + 1) * presetPageSize,
+	),
+);
+let presetQuestionRequestVersion = 0;
 const listRef = ref<HTMLElement | null>(null);
 const { renderECharts } = useEchartsRenderer();
 const copiedMessageId = ref<number | undefined>();
@@ -186,6 +225,33 @@ let copyResetTimer: ReturnType<typeof setTimeout> | null = null;
 let scrollRafId: number | null = null;
 
 const messages = computed<ChatMessage[]>(() => store.currentMessages);
+
+async function loadPresetQuestions(agentId?: number) {
+	const version = ++presetQuestionRequestVersion;
+	presetPage.value = 0;
+	presetQuestions.value = [];
+	if (!agentId) return;
+	try {
+		const questions = (await presetQuestionService.list(agentId))
+			.filter((question) => question.isActive !== false);
+		if (version === presetQuestionRequestVersion)
+			presetQuestions.value = questions;
+	} catch (error) {
+		console.error('获取预设问题失败:', error);
+	}
+}
+
+function showNextPresetPage() {
+	if (presetPageCount.value < 2) return;
+	presetPage.value = (presetPage.value + 1) % presetPageCount.value;
+}
+
+function selectPresetQuestion(question: string) {
+	chatStore.pendingPresetQuestion = question;
+}
+
+watch(() => store.currentAgentId, loadPresetQuestions);
+onMounted(() => loadPresetQuestions(store.currentAgentId));
 
 function parseTimeline(content: string) {
 	try {
@@ -624,7 +690,7 @@ onUnmounted(() => {
 	align-items: center;
 	justify-content: center;
 	min-height: 100%;
-	padding: 48px 24px 150px;
+	padding: 48px 24px;
 	text-align: center;
 }
 
@@ -666,6 +732,50 @@ onUnmounted(() => {
 	font-size: 12px;
 }
 
+.preset-questions {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 300px));
+	justify-content: start;
+	gap: 8px;
+	width: min(640px, 100%);
+	margin-top: 24px;
+}
+
+.preset-questions-more {
+	margin-top: 8px;
+}
+
+.preset-question {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 10px;
+	width: 100%;
+	max-width: 300px;
+	min-height: 48px;
+	padding: 10px 12px;
+	border: 1px solid #e2e8f0;
+	border-radius: 8px;
+	background: #fff;
+	color: #334155;
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.preset-question span {
+	min-width: 0;
+	line-height: 1.5;
+	overflow-wrap: anywhere;
+}
+
+.preset-question:hover,
+.preset-question:focus-visible {
+	border-color: #60a5fa;
+	background: #f8fbff;
+	outline: none;
+}
+
 @keyframes bounce {
 	0%,
 	80%,
@@ -699,6 +809,15 @@ onUnmounted(() => {
 
 	.react-welcome h2 {
 		font-size: 21px;
+	}
+
+	.preset-question {
+		max-width: none;
+	}
+
+	.preset-questions {
+		grid-template-columns: minmax(0, 1fr);
+		width: min(360px, 100%);
 	}
 }
 </style>

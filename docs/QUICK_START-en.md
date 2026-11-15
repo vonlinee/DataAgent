@@ -325,6 +325,8 @@ Preset question management allows you to set preset questions for the agent.
 
 ![preset-questions.png](../img/preset-questions.png)
 
+Open **General Settings > Preset Question Management**, select an agent, then create, edit, or delete its questions. Active questions appear on the agent's chat welcome screen; selecting one fills the chat input without sending it.
+
 #### Configure Semantic Model
 
 Semantic model management allows you to set semantic models for the agent.

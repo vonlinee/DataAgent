@@ -185,6 +185,7 @@ permissions and * limitations under the License. */
 </template>
 
 <script setup lang="ts">
+import { nextTick, watch } from 'vue';
 import { useChatStore } from '~/stores/chat';
 
 const store = useChatStore();
@@ -192,6 +193,19 @@ const inputText = ref('');
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const showDsMenu = ref(false);
 const showModelMenu = ref(false);
+
+watch(
+	() => store.pendingPresetQuestion,
+	(question) => {
+		if (!question) return;
+		inputText.value = question;
+		store.pendingPresetQuestion = '';
+		void nextTick(() => {
+			autoResize();
+			textareaRef.value?.focus();
+		});
+	},
+);
 
 function toggleDsMenu() {
 	if (store.isStreaming) return;

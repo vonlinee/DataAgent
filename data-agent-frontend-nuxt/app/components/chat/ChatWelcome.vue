@@ -38,12 +38,76 @@
 		<p class="welcome-desc">
 			{{ store.currentAgentDescription || '我可以为您分析数据库中的表结构、生成 SQL 或可视化图表。' }}
 		</p>
+		<div v-if="presetQuestions.length" class="preset-questions" aria-label="预设问题">
+			<button
+				v-for="question in visiblePresetQuestions"
+				:key="question.id"
+				type="button"
+				class="preset-question"
+				@click="selectQuestion(question.question)"
+			>
+				<v-icon icon="mdi-lightbulb-outline" size="16" />
+				<span>{{ question.question }}</span>
+			</button>
+		</div>
+		<v-btn
+			v-if="pageCount > 1"
+			class="preset-questions-more"
+			variant="text"
+			color="primary"
+			prepend-icon="mdi-refresh"
+			@click="showNextPresetPage"
+		>
+			换一批
+		</v-btn>
 	</div>
 </template>
 
 <script setup lang="ts">
+import { computed, onMounted, ref, watch } from 'vue';
 import { useChatStore } from '~/stores/chat';
+import presetQuestionService, { type PresetQuestion } from '~/services/presetQuestion';
+
 const store = useChatStore();
+const presetQuestions = ref<PresetQuestion[]>([]);
+const presetPage = ref(0);
+const pageSize = 6;
+const pageCount = computed(() =>
+	Math.ceil(presetQuestions.value.length / pageSize),
+);
+const visiblePresetQuestions = computed(() =>
+	presetQuestions.value.slice(
+		presetPage.value * pageSize,
+		(presetPage.value + 1) * pageSize,
+	),
+);
+let requestVersion = 0;
+
+async function loadPresetQuestions(agentId?: number) {
+	const version = ++requestVersion;
+	presetPage.value = 0;
+	presetQuestions.value = [];
+	if (!agentId) return;
+	try {
+		const questions = (await presetQuestionService.list(agentId))
+			.filter((question) => question.isActive !== false);
+		if (version === requestVersion) presetQuestions.value = questions;
+	} catch (error) {
+		console.error('获取预设问题失败:', error);
+	}
+}
+
+function showNextPresetPage() {
+	if (pageCount.value < 2) return;
+	presetPage.value = (presetPage.value + 1) % pageCount.value;
+}
+
+function selectQuestion(question: string) {
+	store.pendingPresetQuestion = question;
+}
+
+watch(() => store.currentAgentId, loadPresetQuestions);
+onMounted(() => loadPresetQuestions(store.currentAgentId));
 </script>
 
 <style scoped>
@@ -87,5 +151,60 @@ const store = useChatStore();
 	color: #64748b;
 	max-width: 480px;
 	line-height: 1.7;
+}
+
+.preset-questions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 10px;
+	width: min(720px, 100%);
+	margin-top: 30px;
+}
+
+.preset-questions-more {
+	margin-top: 8px;
+}
+
+.preset-question {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	flex: 0 1 calc(50% - 5px);
+	max-width: 355px;
+	min-height: 48px;
+	padding: 12px 14px;
+	border: 1px solid #e2e8f0;
+	border-radius: 8px;
+	background: #fff;
+	color: #334155;
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+	transition: border-color 0.15s, background-color 0.15s;
+}
+
+.preset-question:hover,
+.preset-question:focus-visible {
+	border-color: #60a5fa;
+	background: #f8fbff;
+	outline: none;
+}
+
+.preset-question span {
+	min-width: 0;
+	line-height: 1.5;
+	overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+	.preset-questions {
+		margin-top: 22px;
+	}
+
+	.preset-question {
+		flex-basis: 100%;
+	}
 }
 </style>

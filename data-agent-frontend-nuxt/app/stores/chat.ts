@@ -90,6 +90,7 @@ export const useChatStore = defineStore('chat', () => {
 	const currentAgentName = ref('');
 	const currentAgentAvatar = ref('');
 	const currentAgentDescription = ref('');
+	const pendingPresetQuestion = ref('');
 
 	// ── Datasource state ──────────────────────────────────────────────────────────
 	const allDatasources = ref<Datasource[]>([]);
@@ -626,6 +627,7 @@ export const useChatStore = defineStore('chat', () => {
 		currentAgentName,
 		currentAgentAvatar,
 		currentAgentDescription,
+		pendingPresetQuestion,
 		allDatasources,
 		activeDatasource,
 		chatModels,

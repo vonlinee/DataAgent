@@ -216,15 +216,29 @@
 										class="text-overline text-slate-500 mt-2"
 									/>
 								</template>
-								<v-list-item
-									prepend-icon="mdi-robot-outline"
-									title="智能体管理"
-									:active="isActive('/system/agents')"
-									density="compact"
-									class="rounded-lg mb-1 navigation-sub-item"
-									color="primary"
-									@click="navigateToPath('/system/agents')"
-								/>
+								<v-list-group value="agents">
+									<template #activator="{ props }">
+										<v-list-item
+											v-bind="props"
+											prepend-icon="mdi-robot-outline"
+											title="智能体管理"
+											:active="isActive('/system/agents')"
+											density="compact"
+											class="rounded-lg mb-1 navigation-sub-item"
+											color="primary"
+											@click="navigateToPath('/system/agents')"
+										/>
+									</template>
+									<v-list-item
+										prepend-icon="mdi-comment-question-outline"
+										title="预设问题管理"
+										:active="isActive('/system/agent-preset-questions')"
+										density="compact"
+										class="rounded-lg mb-1 navigation-sub-item"
+										color="primary"
+										@click="navigateToPath('/system/agent-preset-questions')"
+									/>
+								</v-list-group>
 								<v-list-item
 									prepend-icon="mdi-database-refresh-outline"
 									title="数据连接"
@@ -330,7 +344,7 @@ const { mobile } = useDisplay();
 const router = useRouter();
 const route = useRoute();
 // 默认都展开
-const openedGroups = ref(['knowledge', 'system']);
+const openedGroups = ref(['knowledge', 'system', 'agents']);
 
 watch(
 	mobile,
@@ -362,6 +376,7 @@ const routeTitleMap: Record<string, string> = {
 	'/knowledge/agents': '智能体知识库',
 	'/knowledge/semantic-models': '语义模型配置',
 	'/system/skills': 'Skill 管理',
+	'/system/agent-preset-questions': '预设问题管理',
 	'/system/data-sources': '数据连接',
 	'/system/model-config': '模型配置',
 	'/system/settings': '通用设置',
@@ -506,8 +521,14 @@ watch(
 	() => route.fullPath,
 	() => {
 		syncSelectedFromRoute();
-		if (route.path === '/system/skills' && !openedGroups.value.includes('system')) {
+		if (route.path.startsWith('/system/') && !openedGroups.value.includes('system')) {
 			openedGroups.value.push('system');
+		}
+		if (
+			route.path === '/system/agent-preset-questions' &&
+			!openedGroups.value.includes('agents')
+		) {
+			openedGroups.value.push('agents');
 		}
 	},
 );
@@ -630,12 +651,13 @@ watch(
 	background: rgba(255, 255, 255, 0.2);
 }
 
-:deep(.v-list-group__items .v-list-item) {
-	padding-inline-start: 16px !important;
-}
-
 :deep(.flex-grow-1.v-list .v-list-item) {
 	min-height: 36px !important;
+}
+
+:deep(.flex-grow-1.v-list .v-list-group) {
+	--list-indent-size: 4px;
+	--v-list-group-prepend: 8px;
 }
 
 :deep(.v-list-item__spacer) {

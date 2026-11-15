@@ -66,6 +66,50 @@ class AgentPresetQuestionControllerTest {
 	}
 
 	@Test
+	void createPresetQuestion_success_setsAgentAndNextSortOrder() {
+		AgentPresetQuestion existing = new AgentPresetQuestion(1L, "Existing?", 2);
+		existing.setId(5L);
+		when(presetQuestionService.findAllByAgentId(1L)).thenReturn(List.of(existing));
+		when(presetQuestionService.create(any(AgentPresetQuestion.class)))
+			.thenAnswer(invocation -> invocation.getArgument(0));
+		AgentPresetQuestion question = new AgentPresetQuestion();
+		question.setQuestion("New question?");
+
+		ResponseEntity<AgentPresetQuestion> result = controller.createPresetQuestion(1L, question);
+
+		assertEquals(200, result.getStatusCode().value());
+		assertEquals(1L, result.getBody().getAgentId());
+		assertEquals(3, result.getBody().getSortOrder());
+		verify(presetQuestionService).create(question);
+	}
+
+	@Test
+	void updatePresetQuestion_success_updatesQuestion() {
+		AgentPresetQuestion existing = new AgentPresetQuestion(1L, "Old?", 0);
+		existing.setId(10L);
+		when(presetQuestionService.findAllByAgentId(1L)).thenReturn(List.of(existing));
+		AgentPresetQuestion question = new AgentPresetQuestion();
+		question.setQuestion("Updated?");
+
+		ResponseEntity<AgentPresetQuestion> result = controller.updatePresetQuestion(1L, 10L, question);
+
+		assertEquals(200, result.getStatusCode().value());
+		assertEquals(10L, result.getBody().getId());
+		verify(presetQuestionService).update(10L, question);
+	}
+
+	@Test
+	void updatePresetQuestion_questionDoesNotBelongToAgent_returns404() {
+		when(presetQuestionService.findAllByAgentId(1L)).thenReturn(List.of());
+
+		ResponseEntity<AgentPresetQuestion> result = controller.updatePresetQuestion(1L, 10L,
+				new AgentPresetQuestion());
+
+		assertEquals(404, result.getStatusCode().value());
+		verify(presetQuestionService, never()).update(anyLong(), any(AgentPresetQuestion.class));
+	}
+
+	@Test
 	void savePresetQuestions_success_returnsOk() {
 		List<Map<String, Object>> data = List.of(Map.of("question", "Test?", "isActive", true));
 

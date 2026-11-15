@@ -318,6 +318,8 @@ docker ps --format '{{.Names}}' | grep '^dataagent-sandbox-'
 
 ![preset-questions.png](../img/preset-questions.png)
 
+可从“通用设置 > 预设问题管理”进入，选择智能体后新增、编辑或删除问题。启用的问题会显示在该智能体的聊天欢迎页，点击问题可将文本填入聊天输入框。
+
 #### 配置语义模型
 
 语义模型管理，可以为智能体设置语义模型。

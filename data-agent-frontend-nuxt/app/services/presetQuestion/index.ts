@@ -24,30 +24,30 @@ import axios from 'axios';
  * @description 预设问题实体接口
  */
 export interface PresetQuestion {
-  /** 问题 ID */
-  id?: number;
-  /** 智能体 ID */
-  agentId: number;
-  /** 问题内容 */
-  question: string;
-  /** 排序序号 */
-  sortOrder?: number;
-  /** 是否激活 */
-  isActive?: boolean;
-  /** 创建时间 */
-  createTime?: string;
-  /** 更新时间 */
-  updateTime?: string;
+	/** 问题 ID */
+	id?: number;
+	/** 智能体 ID */
+	agentId: number;
+	/** 问题内容 */
+	question: string;
+	/** 排序序号 */
+	sortOrder?: number;
+	/** 是否激活 */
+	isActive?: boolean;
+	/** 创建时间 */
+	createTime?: string;
+	/** 更新时间 */
+	updateTime?: string;
 }
 
 /**
  * @description 预设问题传输对象
  */
 export interface PresetQuestionDTO {
-  /** 问题内容 */
-  question: string;
-  /** 是否激活 */
-  isActive?: boolean;
+	/** 问题内容 */
+	question: string;
+	/** 是否激活 */
+	isActive?: boolean;
 }
 
 const API_BASE_URL = '/api/agent';
@@ -56,61 +56,89 @@ const API_BASE_URL = '/api/agent';
  * @description 预设问题业务逻辑处理类
  */
 class PresetQuestionService {
-  /**
-   * @description 获取指定智能体的预设问题列表
-   * @param {number} agentId - 智能体 ID
-   * @returns {Promise<PresetQuestion[]>} 问题列表
-   */
-  async list(agentId: number): Promise<PresetQuestion[]> {
-    try {
-      const response = await axios.get<PresetQuestion[]>(
-        `${API_BASE_URL}/${agentId}/preset-questions`,
-      );
-      return response.data;
-    } catch (error) {
-      console.error('获取预设问题列表失败:', error);
-      throw error;
-    }
-  }
+	/**
+	 * @description 获取指定智能体的预设问题列表
+	 * @param {number} agentId - 智能体 ID
+	 * @returns {Promise<PresetQuestion[]>} 问题列表
+	 */
+	async list(agentId: number): Promise<PresetQuestion[]> {
+		try {
+			const response = await axios.get<PresetQuestion[]>(
+				`${API_BASE_URL}/${agentId}/preset-questions`,
+			);
+			return response.data;
+		} catch (error) {
+			console.error('获取预设问题列表失败:', error);
+			throw error;
+		}
+	}
 
-  /**
-   * @description 批量保存智能体的预设问题
-   * @param {number} agentId - 智能体 ID
-   * @param {PresetQuestionDTO[]} questions - 问题列表
-   * @returns {Promise<boolean>} 是否保存成功
-   */
-  async batchSave(agentId: number, questions: PresetQuestionDTO[]): Promise<boolean> {
-    try {
-      const questionsData = questions.map(q => ({
-        question: q.question,
-        isActive: q.isActive ?? true,
-      }));
-      const response = await axios.post(
-        `${API_BASE_URL}/${agentId}/preset-questions`,
-        questionsData,
-      );
-      return response.status === 200 || response.status === 201;
-    } catch (error) {
-      console.error('保存预设问题失败:', error);
-      throw error;
-    }
-  }
+	async create(
+		agentId: number,
+		question: PresetQuestionDTO,
+	): Promise<PresetQuestion> {
+		const response = await axios.post<PresetQuestion>(
+			`${API_BASE_URL}/${agentId}/preset-questions/item`,
+			question,
+		);
+		return response.data;
+	}
 
-  /**
-   * @description 删除指定的预设问题
-   * @param {number} agentId - 智能体 ID
-   * @param {number} questionId - 问题 ID
-   * @returns {Promise<boolean>} 是否删除成功
-   */
-  async delete(agentId: number, questionId: number): Promise<boolean> {
-    try {
-      await axios.delete(`${API_BASE_URL}/${agentId}/preset-questions/${questionId}`);
-      return true;
-    } catch (error) {
-      console.error('删除预设问题失败:', error);
-      throw error;
-    }
-  }
+	async update(
+		agentId: number,
+		questionId: number,
+		question: PresetQuestionDTO,
+	): Promise<PresetQuestion> {
+		const response = await axios.put<PresetQuestion>(
+			`${API_BASE_URL}/${agentId}/preset-questions/${questionId}`,
+			question,
+		);
+		return response.data;
+	}
+
+	/**
+	 * @description 批量保存智能体的预设问题
+	 * @param {number} agentId - 智能体 ID
+	 * @param {PresetQuestionDTO[]} questions - 问题列表
+	 * @returns {Promise<boolean>} 是否保存成功
+	 */
+	async batchSave(
+		agentId: number,
+		questions: PresetQuestionDTO[],
+	): Promise<boolean> {
+		try {
+			const questionsData = questions.map((q) => ({
+				question: q.question,
+				isActive: q.isActive ?? true,
+			}));
+			const response = await axios.post(
+				`${API_BASE_URL}/${agentId}/preset-questions`,
+				questionsData,
+			);
+			return response.status === 200 || response.status === 201;
+		} catch (error) {
+			console.error('保存预设问题失败:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * @description 删除指定的预设问题
+	 * @param {number} agentId - 智能体 ID
+	 * @param {number} questionId - 问题 ID
+	 * @returns {Promise<boolean>} 是否删除成功
+	 */
+	async delete(agentId: number, questionId: number): Promise<boolean> {
+		try {
+			await axios.delete(
+				`${API_BASE_URL}/${agentId}/preset-questions/${questionId}`,
+			);
+			return true;
+		} catch (error) {
+			console.error('删除预设问题失败:', error);
+			throw error;
+		}
+	}
 }
 
 export default new PresetQuestionService();

@@ -51,6 +51,53 @@ public class AgentPresetQuestionController {
 	}
 
 	/**
+	 * Create a preset question for an agent
+	 */
+	@PostMapping("/{agentId}/preset-questions/item")
+	public ResponseEntity<AgentPresetQuestion> createPresetQuestion(
+			@PathVariable(value = "agentId") Long agentId, @RequestBody AgentPresetQuestion question) {
+		try {
+			List<AgentPresetQuestion> questions = presetQuestionService.findAllByAgentId(agentId);
+			int nextSortOrder = questions.stream()
+				.mapToInt(item -> item.getSortOrder() == null ? 0 : item.getSortOrder())
+				.max()
+				.orElse(-1) + 1;
+			question.setAgentId(agentId);
+			question.setSortOrder(nextSortOrder);
+			return ResponseEntity.ok(presetQuestionService.create(question));
+		}
+		catch (Exception e) {
+			log.error("Error creating preset question for agent {}", agentId, e);
+			return ResponseEntity.internalServerError().build();
+		}
+	}
+
+	/**
+	 * Update a preset question
+	 */
+	@PutMapping("/{agentId}/preset-questions/{questionId}")
+	public ResponseEntity<AgentPresetQuestion> updatePresetQuestion(
+			@PathVariable(value = "agentId") Long agentId, @PathVariable Long questionId,
+			@RequestBody AgentPresetQuestion question) {
+		try {
+			boolean belongsToAgent = presetQuestionService.findAllByAgentId(agentId)
+				.stream()
+				.anyMatch(existing -> questionId.equals(existing.getId()));
+			if (!belongsToAgent) {
+				return ResponseEntity.notFound().build();
+			}
+			question.setId(questionId);
+			question.setAgentId(agentId);
+			presetQuestionService.update(questionId, question);
+			return ResponseEntity.ok(question);
+		}
+		catch (Exception e) {
+			log.error("Error updating preset question {} for agent {}", questionId, agentId, e);
+			return ResponseEntity.internalServerError().build();
+		}
+	}
+
+	/**
 	 * Batch save preset questions of agent
 	 */
 	@PostMapping("/{agentId}/preset-questions")

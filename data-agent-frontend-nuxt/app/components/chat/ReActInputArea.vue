@@ -138,10 +138,12 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref } from 'vue';
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useReActChatStore } from '~/stores/reactChat';
+import { useChatStore } from '~/stores/chat';
 
 const store = useReActChatStore();
+const chatStore = useChatStore();
 const inputText = ref('');
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const showModels = ref(false);
@@ -152,6 +154,20 @@ const MAX_TEXTAREA_HEIGHT = AUTO_RESIZE_MAX_HEIGHT + 100;
 let isManualHeight = false;
 let resizeStartY = 0;
 let resizeStartHeight = 0;
+
+watch(
+	() => chatStore.pendingPresetQuestion,
+	(question) => {
+		if (!question) return;
+		inputText.value = question;
+		chatStore.pendingPresetQuestion = '';
+		isManualHeight = false;
+		void nextTick(() => {
+			autoResize();
+			textareaRef.value?.focus();
+		});
+	},
+);
 
 function autoResize() {
 	const textarea = textareaRef.value;
