@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.alibaba.cloud.ai.dataagent.mapper.BusinessKnowledgeMapper">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO business_knowledge
+        (business_term, description, synonyms, is_recall, agent_id, created_time, updated_time, embedding_status,
+        is_deleted, sql_fragment)
+        VALUES (#{businessTerm}, #{description}, #{synonyms}, #{isRecall}, #{agentId}, NOW(), NOW(), #{embeddingStatus},
+        #{isDeleted}, #{sqlFragment})
+    </insert>
+
+    <insert id="batchInsert" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO business_knowledge
+        (business_term, description, synonyms, is_recall, agent_id,
+        created_time, updated_time, embedding_status, is_deleted, sql_fragment)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.businessTerm}, #{item.description}, #{item.synonyms}, #{item.isRecall}, #{item.agentId},
+            NOW(), NOW(), #{item.embeddingStatus}, #{item.isDeleted}, #{item.sqlFragment})
+        </foreach>
+    </insert>
+
+    <update id="updateById">
+        UPDATE business_knowledge
+        <set>
+            <if test="businessTerm != null">business_term = #{businessTerm},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="synonyms != null">synonyms = #{synonyms},</if>
+            <if test="isRecall != null">is_recall = #{isRecall},</if>
+            <if test="agentId != null">agent_id = #{agentId},</if>
+            <if test="embeddingStatus != null">embedding_status = #{embeddingStatus},</if>
+            <if test="errorMsg != null">error_msg = #{errorMsg},</if>
+            <if test="isDeleted != null">is_deleted = #{isDeleted},</if>
+            updated_time = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+</mapper>

@@ -19,6 +19,7 @@ import com.alibaba.cloud.ai.dataagent.dto.knowledge.businessknowledge.CreateBusi
 import com.alibaba.cloud.ai.dataagent.dto.knowledge.businessknowledge.UpdateBusinessKnowledgeDTO;
 import com.alibaba.cloud.ai.dataagent.vo.BusinessKnowledgeVO;
 
+import java.io.File;
 import java.util.List;
 
 // TODO 添加一个分页查询的方法
@@ -49,4 +50,9 @@ public interface BusinessKnowledgeService {
 
 	void syncPendingKnowledge(Long agentId);
 
+	void writeToFile(File file, List<BusinessKnowledgeVO> businessKnowledgeVOS);
+
+	List<BusinessKnowledgeVO> loadFromClasspathFile(String classpath);
+
+	void addBatch(Long agentId, List<BusinessKnowledgeVO> businessKnowledgeVOS);
 }

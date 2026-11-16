@@ -26,14 +26,19 @@ import com.alibaba.cloud.ai.dataagent.entity.BusinessKnowledge;
 import com.alibaba.cloud.ai.dataagent.mapper.BusinessKnowledgeMapper;
 import com.alibaba.cloud.ai.dataagent.service.vectorstore.AgentVectorStoreService;
 import com.alibaba.cloud.ai.dataagent.vo.BusinessKnowledgeVO;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+import java.io.File;
+import java.io.InputStream;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -102,8 +107,7 @@ public class BusinessKnowledgeServiceImpl implements BusinessKnowledgeService {
 			entity.setEmbeddingStatus(EmbeddingStatus.COMPLETED);
 			entity.setErrorMsg(null);
 			businessKnowledgeMapper.updateById(entity);
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			String errorMsg = "Failed to add to vector store: " + e.getMessage();
 			entity.setEmbeddingStatus(EmbeddingStatus.FAILED);
 			entity.setErrorMsg(errorMsg);
@@ -141,8 +145,7 @@ public class BusinessKnowledgeServiceImpl implements BusinessKnowledgeService {
 			knowledge.setEmbeddingStatus(EmbeddingStatus.COMPLETED);
 			knowledge.setErrorMsg(null);
 			businessKnowledgeMapper.updateById(knowledge);
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			// 向量库更新失败，不回滚MySQL，只标记状态为失败
 			String errorMsg = "Failed to update vector store: " + e.getMessage();
 			knowledge.setEmbeddingStatus(EmbeddingStatus.FAILED);
@@ -169,7 +172,7 @@ public class BusinessKnowledgeServiceImpl implements BusinessKnowledgeService {
 		// 从数据库获取原始数据
 		BusinessKnowledge knowledge = businessKnowledgeMapper.selectById(id);
 		if (knowledge == null) {
-			log.warn("Knowledge not found with id: " + id);
+            log.warn("Knowledge not found with id: {}", id);
 			return;
 		}
 
@@ -203,11 +206,9 @@ public class BusinessKnowledgeServiceImpl implements BusinessKnowledgeService {
 		if (knowledge == null) {
 			throw new RuntimeException("Knowledge not found with id: " + id);
 		}
-
 		// 更新数据库即可，不需要更新向量库，混合检索的的时候DynamicFilterService会根据 isRecall 字段过滤了
 		knowledge.setIsRecall(isRecall ? 1 : 0);
 		businessKnowledgeMapper.updateById(knowledge);
-
 	}
 
 	@Override
@@ -235,8 +236,7 @@ public class BusinessKnowledgeServiceImpl implements BusinessKnowledgeService {
 				businessKnowledgeMapper.updateById(knowledge);
 			}
 			log.info("Updated {} business knowledge records to COMPLETED status", recalledKnowledge.size());
-		}
-		else {
+		} else {
 			agentVectorStoreService.deleteDocumentsByVectorType(agentId, DocumentMetadataConstant.BUSINESS_TERM);
 		}
 	}
@@ -262,8 +262,7 @@ public class BusinessKnowledgeServiceImpl implements BusinessKnowledgeService {
 			knowledge.setEmbeddingStatus(EmbeddingStatus.COMPLETED);
 			knowledge.setErrorMsg(null);
 			businessKnowledgeMapper.updateById(knowledge);
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			// 再次失败，更新错误信息
 			knowledge.setEmbeddingStatus(EmbeddingStatus.FAILED);
 			knowledge.setErrorMsg(e.getMessage().length() > 200 ? e.getMessage().substring(0, 200) : e.getMessage());
@@ -290,12 +289,75 @@ public class BusinessKnowledgeServiceImpl implements BusinessKnowledgeService {
 		for (BusinessKnowledge knowledge : pendingKnowledge) {
 			try {
 				retryEmbedding(knowledge.getId());
-			}
-			catch (Exception e) {
+			} catch (Exception e) {
 				log.error("Failed to auto-embed business knowledge id={}: {}", knowledge.getId(), e.getMessage());
 			}
 		}
 		log.info("Business knowledge pending embedding completed. Total: {}", pendingKnowledge.size());
 	}
 
+	@Override
+	public void writeToFile(File file, List<BusinessKnowledgeVO> businessKnowledgeVOS) {
+		List<BusinessKnowledgeFileVO> list = businessKnowledgeVOS
+				.stream()
+				.map(item -> new BusinessKnowledgeFileVO(
+						item.getBusinessTerm(),
+						item.getDescription(),
+						item.getSqlFragment(),
+						item.getSynonyms()
+				))
+				.toList();
+
+		try {
+			ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+			mapper.writeValue(file, new Root(list));
+		} catch (Exception e) {
+			throw new IllegalStateException("写业务属于到文件失败：" + file, e);
+		}
+	}
+
+	/**
+	 * YAML 根。
+	 */
+	private record Root(List<BusinessKnowledgeFileVO> glossary) {
+	}
+
+	private record BusinessKnowledgeFileVO(String term,
+										   String description,
+										   String sqlFragment,
+										   List<String> synonyms) {
+	}
+
+	@Override
+	public List<BusinessKnowledgeVO> loadFromClasspathFile(String classpath) {
+		try (InputStream in = new ClassPathResource(classpath).getInputStream()) {
+			ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+			Root root = mapper.readValue(in, Root.class);
+			return root.glossary.stream()
+					.map(item ->
+							BusinessKnowledgeVO.builder()
+									.businessTerm(item.term())
+									.description(item.description())
+									.sqlFragment(item.sqlFragment())
+									.synonyms(item.synonyms())
+									.build())
+					.toList();
+		} catch (Exception e) {
+			throw new IllegalStateException(
+					"加载 glossary 字典失败：" + classpath, e);
+		}
+	}
+
+	@Override
+	public void addBatch(final Long agentId, List<BusinessKnowledgeVO> businessKnowledgeVOS) {
+		List<BusinessKnowledge> list = businessKnowledgeVOS
+				.stream()
+				.map(item -> {
+					BusinessKnowledge entity = BusinessKnowledgeConverter.toEntity(item);
+					entity.setAgentId(agentId);
+					return entity;
+				})
+				.toList();
+		businessKnowledgeMapper.batchInsert(list);
+	}
 }

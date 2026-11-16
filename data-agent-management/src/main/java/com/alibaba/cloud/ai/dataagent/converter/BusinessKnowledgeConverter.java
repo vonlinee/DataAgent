@@ -18,6 +18,7 @@ package com.alibaba.cloud.ai.dataagent.converter;
 import com.alibaba.cloud.ai.dataagent.dto.knowledge.businessknowledge.CreateBusinessKnowledgeDTO;
 import com.alibaba.cloud.ai.dataagent.entity.BusinessKnowledge;
 import com.alibaba.cloud.ai.dataagent.enums.EmbeddingStatus;
+import com.alibaba.cloud.ai.dataagent.util.StringUtils;
 import com.alibaba.cloud.ai.dataagent.vo.BusinessKnowledgeVO;
 import org.springframework.stereotype.Component;
 
@@ -29,14 +30,31 @@ public class BusinessKnowledgeConverter {
 			.id(po.getId())
 			.businessTerm(po.getBusinessTerm())
 			.description(po.getDescription())
-			.synonyms(po.getSynonyms())
+			.synonyms(StringUtils.splitToList(po.getSynonyms(), ","))
 			.isRecall(po.getIsRecall() == 1)
 			.agentId(po.getAgentId())
 			.createdTime(po.getCreatedTime())
 			.updatedTime(po.getUpdatedTime())
+			.sqlFragment(po.getSqlFragment())
 			.embeddingStatus(po.getEmbeddingStatus() != null ? po.getEmbeddingStatus().getValue() : null)
 			.errorMsg(po.getErrorMsg())
 			.build();
+	}
+
+	public static BusinessKnowledge toEntity(BusinessKnowledgeVO vo) {
+		return BusinessKnowledge.builder()
+				.id(vo.getId())
+				.businessTerm(vo.getBusinessTerm())
+				.description(vo.getDescription())
+				.synonyms(StringUtils.join(",", vo.getSynonyms()))
+				.isRecall(vo.getIsRecall() == null ? 1 : (vo.getIsRecall() ? 1 : 0))
+				.agentId(vo.getAgentId())
+				.createdTime(vo.getCreatedTime())
+				.updatedTime(vo.getUpdatedTime())
+				.sqlFragment(vo.getSqlFragment())
+				.embeddingStatus(vo.getEmbeddingStatus() == null ? null : EmbeddingStatus.fromValue(vo.getEmbeddingStatus()))
+				.errorMsg(vo.getErrorMsg())
+				.build();
 	}
 
 	// toEntityForCreate
@@ -45,12 +63,11 @@ public class BusinessKnowledgeConverter {
 			.businessTerm(dto.getBusinessTerm())
 			.description(dto.getDescription())
 			.synonyms(dto.getSynonyms())
+			.sqlFragment(dto.getSqlFragment())
 			.agentId(dto.getAgentId())
 			.isRecall(dto.getIsRecall() ? 1 : 0)
 			.isDeleted(0)
 			.embeddingStatus(EmbeddingStatus.PROCESSING)
 			.build();
-
 	}
-
 }

@@ -45,4 +45,8 @@ public class CreateBusinessKnowledgeDTO {
 	@NotNull(message = "Agent ID cannot be Null")
 	private Long agentId; // Associated agent ID
 
+	/**
+	 * 相关的 SQL 片段
+	 */
+	private String sqlFragment;
 }

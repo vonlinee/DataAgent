@@ -16,6 +16,7 @@
 package com.alibaba.cloud.ai.dataagent.entity;
 
 import com.alibaba.cloud.ai.dataagent.enums.EmbeddingStatus;
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -35,6 +36,7 @@ public class BusinessKnowledge {
 
 	private Long id;
 
+	@JsonAlias(value = "term")
 	private String businessTerm; // Business term
 
 	private String description; // Description
@@ -62,4 +64,5 @@ public class BusinessKnowledge {
 	@Builder.Default
 	private Integer isDeleted = 0;
 
+	private String sqlFragment;
 }

@@ -120,7 +120,8 @@ class DataAgent {
                 DescribeTablesTool.class,
                 ExecuteSqlTool.class,
                 TimeTool.class,
-                ValidateSqlTool.class
+                ValidateSqlTool.class,
+                LookupGlossaryTool.class
         );
         // 基础注册：不限制访问路径
         // toolkit.registerTool(new ReadFileTool());

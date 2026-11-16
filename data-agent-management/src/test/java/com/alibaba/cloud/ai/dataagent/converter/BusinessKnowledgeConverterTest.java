@@ -19,9 +19,11 @@ import com.alibaba.cloud.ai.dataagent.dto.knowledge.businessknowledge.CreateBusi
 import com.alibaba.cloud.ai.dataagent.entity.BusinessKnowledge;
 import com.alibaba.cloud.ai.dataagent.enums.EmbeddingStatus;
 import com.alibaba.cloud.ai.dataagent.vo.BusinessKnowledgeVO;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -50,7 +52,7 @@ class BusinessKnowledgeConverterTest {
 		assertEquals(1L, vo.getId());
 		assertEquals("GMV", vo.getBusinessTerm());
 		assertEquals("Gross Merchandise Volume", vo.getDescription());
-		assertEquals("sales,revenue", vo.getSynonyms());
+		assertEquals(List.of("sales", "revenue"), vo.getSynonyms());
 		assertTrue(vo.getIsRecall());
 		assertEquals(10L, vo.getAgentId());
 		assertEquals(now, vo.getCreatedTime());

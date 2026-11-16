@@ -53,30 +53,10 @@ public interface BusinessKnowledgeMapper {
 			""")
 	List<BusinessKnowledge> searchInAgent(@Param("agentId") Long agentId, @Param("keyword") String keyword);
 
-	@Insert("""
-			INSERT INTO business_knowledge (business_term, description, synonyms, is_recall, agent_id, created_time, updated_time, embedding_status, is_deleted)
-			VALUES (#{businessTerm}, #{description}, #{synonyms}, #{isRecall}, #{agentId}, NOW(), NOW(), #{embeddingStatus}, #{isDeleted})
-			""")
-	@Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
 	int insert(BusinessKnowledge knowledge);
 
-	@Update("""
-			<script>
-			UPDATE business_knowledge
-			<set>
-				<if test="businessTerm != null">business_term = #{businessTerm},</if>
-				<if test="description != null">description = #{description},</if>
-				<if test="synonyms != null">synonyms = #{synonyms},</if>
-				<if test="isRecall != null">is_recall = #{isRecall},</if>
-				<if test="agentId != null">agent_id = #{agentId},</if>
-				<if test="embeddingStatus != null">embedding_status = #{embeddingStatus},</if>
-				<if test="errorMsg != null">error_msg = #{errorMsg},</if>
-				<if test="isDeleted != null">is_deleted = #{isDeleted},</if>
-				updated_time = NOW()
-			</set>
-			WHERE id = #{id}
-			</script>
-			""")
+	int batchInsert(@Param("list") List<BusinessKnowledge> list);
+
 	int updateById(BusinessKnowledge knowledge);
 
 	@Delete("""

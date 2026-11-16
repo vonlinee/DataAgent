@@ -15,6 +15,7 @@
  */
 package com.alibaba.cloud.ai.dataagent.vo;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,6 +23,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -31,11 +33,10 @@ public class BusinessKnowledgeVO {
 
 	private Long id;
 
+	@JsonAlias(value = "term")
 	private String businessTerm;
 
 	private String description;
-
-	private String synonyms;
 
 	@JsonFormat(shape = JsonFormat.Shape.BOOLEAN)
 	private Boolean isRecall;
@@ -53,4 +54,13 @@ public class BusinessKnowledgeVO {
 	// 操作失败的错误信息
 	private String errorMsg;
 
+	/**
+	 * 相关的 SQL 片段
+	 */
+	private String sqlFragment;
+
+	/**
+	 * 同义词列表
+	 */
+	private List<String> synonyms;
 }
