@@ -15,6 +15,7 @@
  */
 package com.alibaba.cloud.ai.dataagent.agent;
 
+import com.alibaba.cloud.ai.dataagent.constant.Constant;
 import com.alibaba.cloud.ai.dataagent.dto.AgentRequest;
 import com.alibaba.cloud.ai.dataagent.dto.AiModelProvider;
 import com.alibaba.cloud.ai.dataagent.dto.ModelConfigDTO;
@@ -253,6 +254,7 @@ class DataAgent {
         RuntimeContext context = RuntimeContext.builder()
                 .userId(agentId)
                 .sessionId(conversationId)
+                .put(Constant.AGENT_ID, agent.getId())
                 .build();
         if (agentRequest.getDatasourceId() != null) {
             context.put("datasourceId", agentRequest.getDatasourceId());

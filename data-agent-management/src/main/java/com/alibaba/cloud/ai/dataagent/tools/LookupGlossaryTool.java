@@ -15,9 +15,12 @@
  */
 package com.alibaba.cloud.ai.dataagent.tools;
 
+import com.alibaba.cloud.ai.dataagent.constant.Constant;
 import com.alibaba.cloud.ai.dataagent.service.business.BusinessKnowledgeService;
+import com.alibaba.cloud.ai.dataagent.util.SpringAIUtils;
 import com.alibaba.cloud.ai.dataagent.vo.BusinessKnowledgeVO;
 import jakarta.annotation.Resource;
+import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
@@ -58,11 +61,15 @@ public class LookupGlossaryTool {
             @ToolParam(description = """
                     要查的术语名或同义词，必传，如 "活跃客户"、"近3个月"、"最近"
                     """)
-            List<String> terms) {
+            List<String> terms, ToolContext toolContext) {
         if (terms == null || terms.isEmpty()) {
             return "入参为空，请必须传入具体术语名（如 \"活跃客户\"），参考工具说明中的可用术语列表，再次尝试调用本工具。";
         }
-        List<BusinessKnowledgeVO> knowledge = businessKnowledgeService.getKnowledge(4L);
+        Integer agentId = SpringAIUtils.getInteger(toolContext, Constant.AGENT_ID);
+        if (agentId == null) {
+            return "未找到 agentId，请检查工具调用上下文，再次尝试调用本工具。";
+        }
+        List<BusinessKnowledgeVO> knowledge = businessKnowledgeService.getKnowledge(Long.valueOf(agentId));
         return formatTermsList(knowledge);
     }
 

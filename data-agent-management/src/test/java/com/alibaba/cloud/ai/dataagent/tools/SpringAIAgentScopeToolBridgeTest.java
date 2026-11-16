@@ -16,6 +16,8 @@
 package com.alibaba.cloud.ai.dataagent.tools;
 
 import io.agentscope.core.message.TextBlock;
+import io.agentscope.core.message.Msg;
+import io.agentscope.core.message.MsgRole;
 import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.message.ToolResultState;
 import io.agentscope.core.message.ToolUseBlock;
@@ -24,6 +26,8 @@ import io.agentscope.core.tool.*;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.support.ToolCallbacks;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.ai.tool.ToolCallback;
 
 import java.util.List;
@@ -34,6 +38,37 @@ import static org.assertj.core.api.Assertions.assertThat;
 class SpringAIAgentScopeToolBridgeTest {
     static final String TEST_TOOL_NAME = "Test-Tool";
     private final ToolCallback springTool = TodoWriteTool.create()[0];
+
+    @Test
+    void convertsUserMessageToSpringAiMessage() {
+        Msg msg = Msg.builder().role(MsgRole.USER).textContent("hello").build();
+
+        org.springframework.ai.chat.messages.Message message = SpringAIAgentScopeToolBridge.asSpringAiMessage(msg);
+
+        assertThat(message).isInstanceOf(org.springframework.ai.chat.messages.UserMessage.class);
+        assertThat(((org.springframework.ai.chat.messages.UserMessage) message).getText()).isEqualTo("hello");
+    }
+
+    @Test
+    void convertsAssistantToolCallAndToolResultMessages() {
+        Msg assistantMsg = Msg.builder()
+                .role(MsgRole.ASSISTANT)
+                .content(new ToolUseBlock("call-1", "lookup", Map.of("key", "value")))
+                .build();
+        Msg toolMsg = Msg.builder()
+                .role(MsgRole.TOOL)
+                .content(ToolResultBlock.text("found").withIdAndName("call-1", "lookup"))
+                .build();
+
+        AssistantMessage assistantMessage = (AssistantMessage) SpringAIAgentScopeToolBridge.asSpringAiMessage(assistantMsg);
+        ToolResponseMessage toolResponse = (ToolResponseMessage) SpringAIAgentScopeToolBridge.asSpringAiMessage(toolMsg);
+
+        assertThat(assistantMessage.getToolCalls()).hasSize(1);
+        assertThat(assistantMessage.getToolCalls().getFirst().name()).isEqualTo("lookup");
+        assertThat(assistantMessage.getToolCalls().getFirst().arguments()).isEqualTo("{\"key\":\"value\"}");
+        assertThat(toolResponse.getResponses()).hasSize(1);
+        assertThat(toolResponse.getResponses().getFirst().responseData()).isEqualTo("found");
+    }
 
     @Test
     void convertsDefinitionAndInvokesSpringTool() {
@@ -54,7 +89,7 @@ class SpringAIAgentScopeToolBridgeTest {
         assertThat(result.getState()).isEqualTo(ToolResultState.SUCCESS);
         assertThat(result.getId()).isEqualTo("call-1");
         assertThat(result.getName()).isEqualTo(TEST_TOOL_NAME);
-        assertThat(((TextBlock) result.getOutput().get(0)).getText()).contains("返回值");
+        assertThat(((TextBlock) result.getOutput().getFirst()).getText()).contains("返回值");
     }
 
     @Test
@@ -74,7 +109,7 @@ class SpringAIAgentScopeToolBridgeTest {
 
         assertThat(result).isNotNull();
         assertThat(result.getState()).isEqualTo(ToolResultState.SUCCESS);
-        assertThat(((TextBlock) result.getOutput().get(0)).getText()).contains("42");
+        assertThat(((TextBlock) result.getOutput().getFirst()).getText()).contains("42");
     }
 
     @Test
@@ -94,7 +129,7 @@ class SpringAIAgentScopeToolBridgeTest {
 
         assertThat(result).isNotNull();
         assertThat(result.getState()).isEqualTo(ToolResultState.SUCCESS);
-        assertThat(((TextBlock) result.getOutput().get(0)).getText()).contains("tenant-42");
+        assertThat(((TextBlock) result.getOutput().getFirst()).getText()).contains("tenant-42");
     }
 
     @Test
@@ -118,7 +153,7 @@ class SpringAIAgentScopeToolBridgeTest {
         assertThat(result).isNotNull();
         assertThat(result.getState()).isEqualTo(ToolResultState.ERROR);
         assertThat(result.getId()).isEqualTo("call-2");
-        assertThat(((TextBlock) result.getOutput().get(0)).getText()).contains("content");
+        assertThat(((TextBlock) result.getOutput().getFirst()).getText()).contains("content");
     }
 
     static class AgentScopeTool {

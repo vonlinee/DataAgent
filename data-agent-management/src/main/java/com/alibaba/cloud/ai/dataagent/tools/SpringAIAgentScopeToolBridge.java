@@ -15,16 +15,21 @@
  */
 package com.alibaba.cloud.ai.dataagent.tools;
 
+import com.alibaba.cloud.ai.dataagent.constant.Constant;
 import com.alibaba.cloud.ai.dataagent.util.JsonUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
+import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.message.ToolResultState;
 import io.agentscope.core.message.ToolUseBlock;
 import io.agentscope.core.agent.RuntimeContext;
+import io.agentscope.core.state.AgentState;
 import io.agentscope.core.tool.AgentTool;
 import io.agentscope.core.tool.ToolCallParam;
 import io.agentscope.core.tool.Toolkit;
 import org.jspecify.annotations.NonNull;
+import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.support.ToolCallbacks;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.definition.ToolDefinition;
@@ -187,10 +192,48 @@ public final class SpringAIAgentScopeToolBridge implements ApplicationContextAwa
         @Override
         public Mono<ToolResultBlock> callAsync(ToolCallParam callParam) {
             Objects.requireNonNull(callParam, "callParam must not be null");
-            return Mono.fromCallable(() -> callback.call(serializeInput(callParam, definition)))
+            return Mono.fromCallable(() -> {
+                        final String input = serializeInput(callParam, definition);
+                        return hasToolContext(callback)
+                                ? callback.call(input, asToolContext(callParam))
+                                : callback.call(input);
+                    })
                     .map(result -> successResult(callParam, result))
                     .onErrorResume(error -> Mono.just(errorResult(callParam, error)));
         }
+    }
+
+    public static boolean hasToolContext(ToolCallback toolCallback) {
+        if (toolCallback instanceof MethodToolCallback methodToolCallback) {
+            return Arrays.asList(getToolMethod(methodToolCallback)
+                    .getParameterTypes()).contains(ToolContext.class);
+        }
+        return false;
+    }
+
+    public static ToolContext asToolContext(ToolCallParam callParam) {
+        HashMap<String, Object> context = new HashMap<>(callParam.getInput());
+        context.put(ToolContext.TOOL_CALL_HISTORY,
+                Optional.of(callParam.getRuntimeContext())
+                        .map(RuntimeContext::getAgentState)
+                        .map(AgentState::getContext)
+                        .stream()
+                        .flatMap(List::stream)
+                        .map(SpringAIAgentScopeToolBridge::asSpringAiMessage)
+                        .toList());
+
+        // sessionId
+        context.put(Constant.SESSION_ID, callParam.getRuntimeContext().getSessionId());
+        context.put(Constant.USER_ID, callParam.getRuntimeContext().getUserId());
+        // extra
+        Map<String, Object> extra = callParam.getRuntimeContext().getExtra();
+        context.putAll(extra);
+
+        return new ToolContext(context);
+    }
+
+    public static Message asSpringAiMessage(Msg msg) {
+        return MsgToSpringAiConverter.convert(msg);
     }
 
     /**

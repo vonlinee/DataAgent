@@ -15,6 +15,7 @@
  */
 package com.alibaba.cloud.ai.dataagent.util;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class JsonUtil {
@@ -25,4 +26,7 @@ public class JsonUtil {
 		return objectMapper;
 	}
 
+    public static String toJsonString(Object object) throws JsonProcessingException {
+        return objectMapper.writeValueAsString(object);
+    }
 }
