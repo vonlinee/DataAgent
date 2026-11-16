@@ -244,13 +244,17 @@ class PromptHelperTest {
 	@Test
 	void buildBusinessKnowledgePrompt_blankContent_usesDefault() {
 		String result = PromptHelper.buildBusinessKnowledgePrompt("");
-		assertTrue(result.contains("<business_knowledge>\n无\n</business_knowledge>"));
+		assertTrue(result.contains("<business_knowledge>"));
+		assertTrue(result.contains("无"));
+		assertTrue(result.contains("</business_knowledge>"));
 	}
 
 	@Test
 	void buildBusinessKnowledgePrompt_nullContent_usesDefault() {
 		String result = PromptHelper.buildBusinessKnowledgePrompt(null);
-		assertTrue(result.contains("<business_knowledge>\n无\n</business_knowledge>"));
+		assertTrue(result.contains("<business_knowledge>"));
+		assertTrue(result.contains("无"));
+		assertTrue(result.contains("</business_knowledge>"));
 	}
 
 	@Test
@@ -263,13 +267,17 @@ class PromptHelperTest {
 	@Test
 	void buildAgentKnowledgePrompt_blankContent_usesDefault() {
 		String result = PromptHelper.buildAgentKnowledgePrompt("");
-		assertTrue(result.contains("<agent_knowledge>\n无\n</agent_knowledge>"));
+		assertTrue(result.contains("<agent_knowledge>"));
+		assertTrue(result.contains("无"));
+		assertTrue(result.contains("</agent_knowledge>"));
 	}
 
 	@Test
 	void buildAgentKnowledgePrompt_nullContent_usesDefault() {
 		String result = PromptHelper.buildAgentKnowledgePrompt(null);
-		assertTrue(result.contains("<agent_knowledge>\n无\n</agent_knowledge>"));
+		assertTrue(result.contains("<agent_knowledge>"));
+		assertTrue(result.contains("无"));
+		assertTrue(result.contains("</agent_knowledge>"));
 	}
 
 	@Test

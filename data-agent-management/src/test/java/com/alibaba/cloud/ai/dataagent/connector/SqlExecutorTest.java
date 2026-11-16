@@ -52,8 +52,6 @@ class SqlExecutorTest {
 	@Test
 	void executeSqlAndReturnObject_validSelect_returnsResults() throws SQLException {
 		when(connection.createStatement()).thenReturn(statement);
-		when(connection.getMetaData()).thenReturn(databaseMetaData);
-		when(databaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
 		when(statement.executeQuery("SELECT id, name FROM users")).thenReturn(resultSet);
 		when(resultSet.getMetaData()).thenReturn(resultSetMetaData);
 		when(resultSetMetaData.getColumnCount()).thenReturn(2);
@@ -70,15 +68,13 @@ class SqlExecutorTest {
 		assertTrue(result.getColumn().contains("id"));
 		assertTrue(result.getColumn().contains("name"));
 		assertEquals(1, result.getData().size());
-		assertEquals("1", result.getData().get(0).get("id"));
-		assertEquals("Alice", result.getData().get(0).get("name"));
+		assertEquals("1", result.getData().getFirst().get("id"));
+		assertEquals("Alice", result.getData().getFirst().get("name"));
 	}
 
 	@Test
 	void executeSqlAndReturnObject_emptyResult_returnsEmptyData() throws SQLException {
 		when(connection.createStatement()).thenReturn(statement);
-		when(connection.getMetaData()).thenReturn(databaseMetaData);
-		when(databaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
 		when(statement.executeQuery("SELECT id FROM empty_table")).thenReturn(resultSet);
 		when(resultSet.getMetaData()).thenReturn(resultSetMetaData);
 		when(resultSetMetaData.getColumnCount()).thenReturn(1);
@@ -95,8 +91,6 @@ class SqlExecutorTest {
 	@Test
 	void executeSqlAndReturnObject_invalidSql_throwsSQLException() throws SQLException {
 		when(connection.createStatement()).thenReturn(statement);
-		when(connection.getMetaData()).thenReturn(databaseMetaData);
-		when(databaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
 		when(statement.executeQuery("INVALID SQL")).thenThrow(new SQLException("syntax error"));
 
 		assertThrows(SQLException.class,
@@ -124,6 +118,7 @@ class SqlExecutorTest {
 	@Test
 	void executeSqlAndReturnObject_withPostgresqlSchema_setsSearchPath() throws SQLException {
 		when(connection.createStatement()).thenReturn(statement);
+		when(statement.getConnection()).thenReturn(connection);
 		when(connection.getMetaData()).thenReturn(databaseMetaData);
 		when(databaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
 		when(statement.executeQuery("SELECT 1")).thenReturn(resultSet);
@@ -141,6 +136,7 @@ class SqlExecutorTest {
 	@Test
 	void executeSqlAndReturnObject_withH2Schema_usesSchema() throws SQLException {
 		when(connection.createStatement()).thenReturn(statement);
+		when(statement.getConnection()).thenReturn(connection);
 		when(connection.getMetaData()).thenReturn(databaseMetaData);
 		when(databaseMetaData.getDatabaseProductName()).thenReturn("H2");
 		when(statement.executeQuery("SELECT 1")).thenReturn(resultSet);
@@ -158,6 +154,7 @@ class SqlExecutorTest {
 	@Test
 	void executeSqlAndReturnObject_withOracleSchema_altersSession() throws SQLException {
 		when(connection.createStatement()).thenReturn(statement);
+		when(statement.getConnection()).thenReturn(connection);
 		when(connection.getMetaData()).thenReturn(databaseMetaData);
 		when(databaseMetaData.getDatabaseProductName()).thenReturn("Oracle");
 		when(statement.executeQuery("SELECT 1 FROM DUAL")).thenReturn(resultSet);
@@ -175,6 +172,7 @@ class SqlExecutorTest {
 	@Test
 	void executeSqlAndReturnObject_withDamengSchema_setsSchema() throws SQLException {
 		when(connection.createStatement()).thenReturn(statement);
+		when(statement.getConnection()).thenReturn(connection);
 		when(connection.getMetaData()).thenReturn(databaseMetaData);
 		when(databaseMetaData.getDatabaseProductName()).thenReturn("DM DBMS");
 		when(statement.executeQuery("SELECT 1")).thenReturn(resultSet);
@@ -192,8 +190,6 @@ class SqlExecutorTest {
 	@Test
 	void executeSqlAndReturnObject_withNullSchema_skipsSchemaSwitch() throws SQLException {
 		when(connection.createStatement()).thenReturn(statement);
-		when(connection.getMetaData()).thenReturn(databaseMetaData);
-		when(databaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
 		when(statement.executeQuery("SELECT 1")).thenReturn(resultSet);
 		when(resultSet.getMetaData()).thenReturn(resultSetMetaData);
 		when(resultSetMetaData.getColumnCount()).thenReturn(1);
@@ -209,8 +205,6 @@ class SqlExecutorTest {
 	@Test
 	void executeSqlAndReturnObject_withEmptySchema_skipsSchemaSwitch() throws SQLException {
 		when(connection.createStatement()).thenReturn(statement);
-		when(connection.getMetaData()).thenReturn(databaseMetaData);
-		when(databaseMetaData.getDatabaseProductName()).thenReturn("H2");
 		when(statement.executeQuery("SELECT 1")).thenReturn(resultSet);
 		when(resultSet.getMetaData()).thenReturn(resultSetMetaData);
 		when(resultSetMetaData.getColumnCount()).thenReturn(1);
@@ -226,6 +220,7 @@ class SqlExecutorTest {
 	@Test
 	void executeSqlAndReturnArr_withMysqlSchema_switchesDatabase() throws SQLException {
 		when(connection.createStatement()).thenReturn(statement);
+		when(statement.getConnection()).thenReturn(connection);
 		when(connection.getCatalog()).thenReturn("original_db");
 		when(connection.getMetaData()).thenReturn(databaseMetaData);
 		when(databaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
@@ -245,6 +240,7 @@ class SqlExecutorTest {
 	@Test
 	void executeSqlAndReturnArr_withPostgresqlSchema_setsSearchPath() throws SQLException {
 		when(connection.createStatement()).thenReturn(statement);
+		when(statement.getConnection()).thenReturn(connection);
 		when(connection.getCatalog()).thenReturn("mydb");
 		when(connection.getMetaData()).thenReturn(databaseMetaData);
 		when(databaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
@@ -263,6 +259,7 @@ class SqlExecutorTest {
 	@Test
 	void executeSqlAndReturnArr_withOracleSchema_altersSession() throws SQLException {
 		when(connection.createStatement()).thenReturn(statement);
+		when(statement.getConnection()).thenReturn(connection);
 		when(connection.getCatalog()).thenReturn("orcl");
 		when(connection.getMetaData()).thenReturn(databaseMetaData);
 		when(databaseMetaData.getDatabaseProductName()).thenReturn("Oracle");
@@ -281,6 +278,7 @@ class SqlExecutorTest {
 	@Test
 	void executeSqlAndReturnArr_withDamengSchema_setsSchema() throws SQLException {
 		when(connection.createStatement()).thenReturn(statement);
+		when(statement.getConnection()).thenReturn(connection);
 		when(connection.getCatalog()).thenReturn("DAMENG");
 		when(connection.getMetaData()).thenReturn(databaseMetaData);
 		when(databaseMetaData.getDatabaseProductName()).thenReturn("DM DBMS");
@@ -299,9 +297,6 @@ class SqlExecutorTest {
 	@Test
 	void executeSqlAndReturnArr_withNullSchema_skipsSchemaSwitch() throws SQLException {
 		when(connection.createStatement()).thenReturn(statement);
-		when(connection.getCatalog()).thenReturn("mydb");
-		when(connection.getMetaData()).thenReturn(databaseMetaData);
-		when(databaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
 		when(statement.executeQuery("SELECT 1")).thenReturn(resultSet);
 		when(resultSet.getMetaData()).thenReturn(resultSetMetaData);
 		when(resultSetMetaData.getColumnCount()).thenReturn(1);

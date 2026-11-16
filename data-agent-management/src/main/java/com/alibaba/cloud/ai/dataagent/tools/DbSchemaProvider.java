@@ -134,7 +134,14 @@ public class DbSchemaProvider implements SchemaProvider {
         if (tableNames == null || tableNames.isEmpty()) {
             return "未提供有效的表名。请传入具体表名，或先调用 listTables 查看可用表。";
         }
-        List<String> noSchemedTableNames = SqlUtil.extractNoSchemedTableNames(tableNames);
+        List<String> validTableNames = tableNames.stream()
+                .filter(StringUtils::isNotBlank)
+                .map(String::trim)
+                .toList();
+        if (validTableNames.isEmpty()) {
+            return "未提供有效的表名。请传入具体表名，或先调用 listTables 查看可用表。";
+        }
+        List<String> noSchemedTableNames = SqlUtil.extractNoSchemedTableNames(validTableNames);
         if (CollectionUtils.isNotEmpty(noSchemedTableNames)) {
             String joinedNoSchemedTableNames = String.join(",", noSchemedTableNames);
             return "以下表(%s)未提供有效的表名。表名需符合格式: schema.tableName".formatted(joinedNoSchemedTableNames);
@@ -142,16 +149,15 @@ public class DbSchemaProvider implements SchemaProvider {
         StringBuilder context = new StringBuilder("指定数据表的字段详情：\n");
         int tableIndex = 0;
         try {
-            List<ColumnInfoBO> columns = findColumns(dataSourceId, tableNames);
+            List<ColumnInfoBO> columns = findColumns(dataSourceId, validTableNames);
             Map<String, List<ColumnInfoBO>> groupByTableName = columns.stream()
                     .collect(Collectors.groupingBy(ColumnInfoBO::getQualifiedTableName));
-            for (Map.Entry<String, List<ColumnInfoBO>> entry : groupByTableName.entrySet()) {
+            for (String tableName : validTableNames) {
                 tableIndex++;
                 context.append(tableIndex)
                         .append(". 表名: ")
-                        .append(SqlUtil.quoteColumnName(entry.getKey()));
-                appendColumnContext(context, columns);
-                tableIndex++;
+                        .append(SqlUtil.quoteColumnName(tableName));
+                appendColumnContext(context, groupByTableName.getOrDefault(tableName, List.of()));
             }
         } catch (Exception e) {
             throw new IllegalStateException("获取数据源 " + dataSourceId + " 的表字段详情失败", e);
@@ -175,6 +181,7 @@ public class DbSchemaProvider implements SchemaProvider {
             context.append("   ").append(columnIndex)
                     .append(") `")
                     .append(column.getName())
+                    .append("`")
                     .append(", 类型：").append(valueOrDefault(column.getType(), "UNKNOWN"))
                     .append("；非空：").append(column.isNotnull() ? "是" : "否")
                     .append("；主键：").append(column.isPrimary() ? "是" : "否").append("\n");

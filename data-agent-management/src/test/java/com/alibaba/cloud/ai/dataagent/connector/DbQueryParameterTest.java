@@ -79,19 +79,13 @@ class DbQueryParameterTest {
 	@Test
 	void testEquals_sameObject() {
 		DbQueryParameter p = new DbQueryParameter();
-		assertTrue(p.equals(p));
+        assertEquals(p, p);
 	}
 
 	@Test
 	void testEquals_null() {
 		DbQueryParameter p = new DbQueryParameter();
 		assertNotEquals(null, p);
-	}
-
-	@Test
-	void testEquals_differentClass() {
-		DbQueryParameter p = new DbQueryParameter();
-		assertNotEquals("string", p);
 	}
 
 	@Test

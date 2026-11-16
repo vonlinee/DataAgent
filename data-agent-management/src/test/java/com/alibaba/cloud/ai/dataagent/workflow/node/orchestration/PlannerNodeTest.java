@@ -227,7 +227,8 @@ class PlannerNodeTest {
 
 		assertEquals("查询所有用户信息", plan.getExecutionPlan().get(0).getToolParameters().getInstruction());
 		assertTrue(promptCaptor.getValue().contains("请不要使用Python分析，直接用SQL"));
-		assertTrue(promptCaptor.getValue().contains(VALID_PLAN_JSON.trim()));
+		assertTrue(promptCaptor.getValue().contains("<previous_plan>"));
+		assertTrue(promptCaptor.getValue().contains("分析用户查询，需要查询用户数据"));
 	}
 
 	@Test

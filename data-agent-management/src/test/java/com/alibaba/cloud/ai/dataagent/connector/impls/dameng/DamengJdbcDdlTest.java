@@ -24,6 +24,7 @@ import com.alibaba.cloud.ai.dataagent.bo.schema.ResultSetBO;
 import com.alibaba.cloud.ai.dataagent.bo.schema.SchemaInfoBO;
 import com.alibaba.cloud.ai.dataagent.bo.schema.TableInfoBO;
 import com.alibaba.cloud.ai.dataagent.connector.SqlExecutor;
+import com.alibaba.cloud.ai.dataagent.connector.SqlExecutorTestSupport;
 import com.alibaba.cloud.ai.dataagent.enums.BizDataSourceTypeEnum;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -71,11 +72,11 @@ class DamengJdbcDdlTest {
 		String[][] resultArr = { { "USERNAME" }, { "SYSDBA" }, { "TEST" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<SchemaInfoBO> schemas = damengJdbcDdl.showSchemas(connection);
 			assertEquals(2, schemas.size());
-			assertEquals("SYSDBA", schemas.get(0).getName());
+			assertEquals("SYSDBA", schemas.getFirst().getName());
 		}
 	}
 
@@ -84,7 +85,7 @@ class DamengJdbcDdlTest {
 		String[][] resultArr = { { "USERNAME" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			assertTrue(damengJdbcDdl.showSchemas(connection).isEmpty());
 		}
@@ -93,8 +94,7 @@ class DamengJdbcDdlTest {
 	@Test
 	void showSchemas_sqlException_throwsRuntimeException() {
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString()))
-				.thenThrow(new SQLException("error"));
+			SqlExecutorTestSupport.stubSqlException(ms, new SQLException("error"));
 
 			assertRuntimeCause(SQLException.class, "error", () -> damengJdbcDdl.showSchemas(connection));
 		}
@@ -105,11 +105,11 @@ class DamengJdbcDdlTest {
 		String[][] resultArr = { { "TABLE_NAME" }, { "USERS" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<TableInfoBO> tables = damengJdbcDdl.showTables(connection, "SYSDBA", "USER");
 			assertEquals(1, tables.size());
-			assertEquals("USERS", tables.get(0).getName());
+			assertEquals("USERS", tables.getFirst().getName());
 		}
 	}
 
@@ -118,7 +118,7 @@ class DamengJdbcDdlTest {
 		String[][] resultArr = { { "TABLE_NAME" }, { "ORDERS" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<TableInfoBO> tables = damengJdbcDdl.showTables(connection, "SYSDBA", null);
 			assertEquals(1, tables.size());
@@ -137,10 +137,9 @@ class DamengJdbcDdlTest {
 
 	@Test
 	void fetchTables_returnsTableList() {
-		String[][] resultArr = { { "TABLE_NAME" }, { "USERS" } };
-
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			ms.when(() -> SqlExecutor.executeSqlAndExtract(any(Connection.class), anyString(), any()))
+					.thenReturn(List.of("USERS"));
 
 			List<TableInfoBO> tables = damengJdbcDdl.fetchTables(connection, "SYSDBA", List.of("USERS"));
 			assertEquals(1, tables.size());
@@ -153,8 +152,7 @@ class DamengJdbcDdlTest {
 				{ "ID", "NUMBER", "22", "N" }, { "NAME", "VARCHAR2", "100", "Y" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<ColumnInfoBO> columns = damengJdbcDdl.showColumns(connection, "SYSDBA", "USERS");
 			assertEquals(2, columns.size());
@@ -180,39 +178,36 @@ class DamengJdbcDdlTest {
 				{ "ORDERS", "USER_ID", "FK_ORDERS", "SYSDBA", "PK_USERS" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<ForeignKeyInfoBO> fks = damengJdbcDdl.showForeignKeys(connection, "SYSDBA", List.of("ORDERS"));
 			assertEquals(1, fks.size());
-			assertEquals("ORDERS", fks.get(0).getTable());
-			assertEquals("USER_ID", fks.get(0).getColumn());
+			assertEquals("ORDERS", fks.getFirst().getTable());
+			assertEquals("USER_ID", fks.getFirst().getColumn());
 		}
 	}
 
 	@Test
-	void sampleColumn_returnsDedupedSamples() {
+	void sampleColumn_preservesDuplicateSamples() {
 		String[][] resultArr = { { "NAME" }, { "Alice" }, { "Bob" }, { "Alice" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<String> samples = damengJdbcDdl.sampleColumn(connection, "SYSDBA", "USERS", "NAME");
 			assertTrue(samples.contains("Alice"));
 			assertTrue(samples.contains("Bob"));
-			assertEquals(2, samples.size());
+			assertEquals(3, samples.size());
 		}
 	}
 
 	@Test
-	void sampleColumn_sqlException_returnsEmptyList() {
+	void sampleColumn_sqlException_throwsRuntimeException() {
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenThrow(new SQLException("error"));
+			SqlExecutorTestSupport.stubSqlException(ms, new SQLException("error"));
 
-			List<String> samples = damengJdbcDdl.sampleColumn(connection, "SYSDBA", "USERS", "NAME");
-			assertTrue(samples.isEmpty());
+			assertRuntimeCause(SQLException.class, "error",
+					() -> damengJdbcDdl.sampleColumn(connection, "SYSDBA", "USERS", "NAME"));
 		}
 	}
 
@@ -221,12 +216,11 @@ class DamengJdbcDdlTest {
 		ResultSetBO expected = ResultSetBO.builder().build();
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnObject(any(Connection.class), anyString(), anyString()))
-				.thenReturn(expected);
+			ms.when(() -> SqlExecutor.executeSql(any(Connection.class), anyString(), anyString())).thenReturn(expected);
 
 			ResultSetBO result = damengJdbcDdl.scanTable(connection, "SYSDBA", "USERS");
 			assertSame(expected, result);
-			ms.verify(() -> SqlExecutor.executeSqlAndReturnObject(connection, "SYSDBA",
+			ms.verify(() -> SqlExecutor.executeSql(connection, "SYSDBA",
 					"SELECT * FROM USERS FETCH FIRST 20 ROWS ONLY"));
 		}
 	}
@@ -234,8 +228,7 @@ class DamengJdbcDdlTest {
 	@Test
 	void scanTable_sqlException_throwsRuntimeException() {
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnObject(any(Connection.class), anyString(), anyString()))
-				.thenThrow(new SQLException("error"));
+			ms.when(() -> SqlExecutor.executeSql(any(Connection.class), anyString(), anyString())).thenThrow(new com.alibaba.cloud.ai.dataagent.exception.RuntimeSqlException(new SQLException("error")));
 
 			assertRuntimeCause(SQLException.class, "error",
 					() -> damengJdbcDdl.scanTable(connection, "SYSDBA", "USERS"));
@@ -247,7 +240,7 @@ class DamengJdbcDdlTest {
 		String[][] resultArr = { { "USERNAME" }, {}, { "SYSDBA" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<SchemaInfoBO> schemas = damengJdbcDdl.showSchemas(connection);
 			assertEquals(1, schemas.size());
@@ -259,7 +252,7 @@ class DamengJdbcDdlTest {
 		String[][] resultArr = { { "TABLE_NAME" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			assertTrue(damengJdbcDdl.showTables(connection, "SYSDBA", null).isEmpty());
 		}
@@ -270,7 +263,7 @@ class DamengJdbcDdlTest {
 		String[][] resultArr = { { "TABLE_NAME" }, {}, { "USERS" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<TableInfoBO> tables = damengJdbcDdl.showTables(connection, "SYSDBA", null);
 			assertEquals(1, tables.size());
@@ -280,8 +273,7 @@ class DamengJdbcDdlTest {
 	@Test
 	void showTables_sqlException_throwsRuntimeException() {
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString()))
-				.thenThrow(new SQLException("error"));
+			SqlExecutorTestSupport.stubSqlException(ms, new SQLException("error"));
 
 			assertRuntimeCause(SQLException.class, "error", () -> damengJdbcDdl.showTables(connection, "SYSDBA", null));
 		}
@@ -292,7 +284,7 @@ class DamengJdbcDdlTest {
 		String[][] resultArr = { { "TABLE_NAME" }, { "USERS" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<TableInfoBO> tables = damengJdbcDdl.showTables(connection, "SYSDBA", "");
 			assertEquals(1, tables.size());
@@ -304,7 +296,7 @@ class DamengJdbcDdlTest {
 		String[][] resultArr = { { "TABLE_NAME" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			assertTrue(damengJdbcDdl.fetchTables(connection, "SYSDBA", List.of("USERS")).isEmpty());
 		}
@@ -315,7 +307,7 @@ class DamengJdbcDdlTest {
 		String[][] resultArr = { { "TABLE_NAME" }, {}, { "USERS" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<TableInfoBO> tables = damengJdbcDdl.fetchTables(connection, "SYSDBA", List.of("USERS"));
 			assertEquals(1, tables.size());
@@ -325,8 +317,7 @@ class DamengJdbcDdlTest {
 	@Test
 	void fetchTables_sqlException_throwsRuntimeException() {
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString()))
-				.thenThrow(new SQLException("error"));
+			SqlExecutorTestSupport.stubSqlException(ms, new SQLException("error"));
 
 			assertRuntimeCause(SQLException.class, "error",
 					() -> damengJdbcDdl.fetchTables(connection, "SYSDBA", List.of("USERS")));
@@ -338,8 +329,7 @@ class DamengJdbcDdlTest {
 		String[][] resultArr = { { "COLUMN_NAME", "DATA_TYPE", "DATA_LENGTH", "NULLABLE" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			assertTrue(damengJdbcDdl.showColumns(connection, "SYSDBA", "USERS").isEmpty());
 		}
@@ -351,8 +341,7 @@ class DamengJdbcDdlTest {
 				{ "ID", "NUMBER", "22", "N" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<ColumnInfoBO> columns = damengJdbcDdl.showColumns(connection, "SYSDBA", "USERS");
 			assertEquals(1, columns.size());
@@ -362,8 +351,7 @@ class DamengJdbcDdlTest {
 	@Test
 	void showColumns_sqlException_throwsRuntimeException() {
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenThrow(new SQLException("error"));
+			SqlExecutorTestSupport.stubSqlException(ms, new SQLException("error"));
 
 			assertRuntimeCause(SQLException.class, "error",
 					() -> damengJdbcDdl.showColumns(connection, "SYSDBA", "USERS"));
@@ -376,8 +364,7 @@ class DamengJdbcDdlTest {
 				{ "ORDERS", "USER_ID", "FK_ORDERS", "SYSDBA", "PK_USERS" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<ForeignKeyInfoBO> fks = damengJdbcDdl.showForeignKeys(connection, "SYSDBA", List.of("ORDERS"));
 			assertEquals(1, fks.size());
@@ -387,8 +374,7 @@ class DamengJdbcDdlTest {
 	@Test
 	void showForeignKeys_sqlException_throwsRuntimeException() {
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenThrow(new SQLException("error"));
+			SqlExecutorTestSupport.stubSqlException(ms, new SQLException("error"));
 
 			assertRuntimeCause(SQLException.class, "error",
 					() -> damengJdbcDdl.showForeignKeys(connection, "SYSDBA", List.of("ORDERS")));
@@ -400,8 +386,7 @@ class DamengJdbcDdlTest {
 		String[][] resultArr = { { "NAME" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			assertTrue(damengJdbcDdl.sampleColumn(connection, "SYSDBA", "USERS", "NAME").isEmpty());
 		}
@@ -412,8 +397,7 @@ class DamengJdbcDdlTest {
 		String[][] resultArr = { { "NAME" }, {}, { "Alice" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<String> samples = damengJdbcDdl.sampleColumn(connection, "SYSDBA", "USERS", "NAME");
 			assertEquals(1, samples.size());
@@ -425,8 +409,7 @@ class DamengJdbcDdlTest {
 		String[][] resultArr = { { "NAME" }, { "NAME" }, { "Alice" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<String> samples = damengJdbcDdl.sampleColumn(connection, "SYSDBA", "USERS", "NAME");
 			assertEquals(1, samples.size());

@@ -1,0 +1,73 @@
+/*
+ * Copyright 2024-2026 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.alibaba.cloud.ai.dataagent.connector;
+
+import com.alibaba.cloud.ai.dataagent.exception.RuntimeSqlException;
+import org.mockito.ArgumentMatchers;
+import org.mockito.MockedStatic;
+
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.BiFunction;
+
+public final class SqlExecutorTestSupport {
+
+	private SqlExecutorTestSupport() {
+	}
+
+	public static void stubRows(MockedStatic<SqlExecutor> sqlExecutor, String[][] rows) {
+		sqlExecutor.when(() -> SqlExecutor.executeSqlAndReturnArr(ArgumentMatchers.any(Connection.class),
+				ArgumentMatchers.anyString())).thenReturn(rows);
+		sqlExecutor.when(() -> SqlExecutor.executeSqlAndReturnArr(ArgumentMatchers.any(Connection.class),
+				ArgumentMatchers.nullable(String.class), ArgumentMatchers.anyString())).thenReturn(rows);
+		sqlExecutor.when(() -> SqlExecutor.executeSqlAndExtract(ArgumentMatchers.any(Connection.class),
+				ArgumentMatchers.anyString(), ArgumentMatchers.any()))
+			.thenAnswer(invocation -> mapRows(rows, invocation.getArgument(2)));
+		sqlExecutor.when(() -> SqlExecutor.executeSqlAndExtract(ArgumentMatchers.any(Connection.class),
+				ArgumentMatchers.nullable(String.class), ArgumentMatchers.anyString(), ArgumentMatchers.any()))
+			.thenAnswer(invocation -> mapRows(rows, invocation.getArgument(3)));
+	}
+
+	public static void stubSqlException(MockedStatic<SqlExecutor> sqlExecutor, SQLException exception) {
+		sqlExecutor.when(() -> SqlExecutor.executeSqlAndReturnArr(ArgumentMatchers.any(Connection.class),
+				ArgumentMatchers.anyString())).thenThrow(exception);
+		sqlExecutor.when(() -> SqlExecutor.executeSqlAndReturnArr(ArgumentMatchers.any(Connection.class),
+				ArgumentMatchers.nullable(String.class), ArgumentMatchers.anyString())).thenThrow(exception);
+		sqlExecutor.when(() -> SqlExecutor.executeSqlAndExtract(ArgumentMatchers.any(Connection.class),
+				ArgumentMatchers.anyString(), ArgumentMatchers.any()))
+			.thenThrow(new RuntimeSqlException(exception));
+		sqlExecutor.when(() -> SqlExecutor.executeSqlAndExtract(ArgumentMatchers.any(Connection.class),
+				ArgumentMatchers.nullable(String.class), ArgumentMatchers.anyString(), ArgumentMatchers.any()))
+			.thenThrow(new RuntimeSqlException(exception));
+	}
+
+	private static <T> List<T> mapRows(String[][] rows, BiFunction<String[], Integer, T> rowMapper) {
+		List<T> results = new ArrayList<>();
+		for (int rowNum = 1; rowNum < rows.length; rowNum++) {
+			if (rows[rowNum].length == 0) {
+				continue;
+			}
+			T result = rowMapper.apply(rows[rowNum], rowNum);
+			if (result != null) {
+				results.add(result);
+			}
+		}
+		return results;
+	}
+
+}

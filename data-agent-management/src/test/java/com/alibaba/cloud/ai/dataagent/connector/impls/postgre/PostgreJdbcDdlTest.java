@@ -24,6 +24,7 @@ import com.alibaba.cloud.ai.dataagent.bo.schema.ResultSetBO;
 import com.alibaba.cloud.ai.dataagent.bo.schema.SchemaInfoBO;
 import com.alibaba.cloud.ai.dataagent.bo.schema.TableInfoBO;
 import com.alibaba.cloud.ai.dataagent.connector.SqlExecutor;
+import com.alibaba.cloud.ai.dataagent.connector.SqlExecutorTestSupport;
 import com.alibaba.cloud.ai.dataagent.enums.BizDataSourceTypeEnum;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,6 +41,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -65,11 +67,11 @@ class PostgreJdbcDdlTest {
 		String[][] resultArr = { { "datname" }, { "postgres" }, { "mydb" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<DatabaseInfoBO> databases = postgreJdbcDdl.showDatabases(connection);
 			assertEquals(2, databases.size());
-			assertEquals("postgres", databases.get(0).getName());
+			assertEquals("postgres", databases.getFirst().getName());
 		}
 	}
 
@@ -78,7 +80,7 @@ class PostgreJdbcDdlTest {
 		String[][] resultArr = { { "datname" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			assertTrue(postgreJdbcDdl.showDatabases(connection).isEmpty());
 		}
@@ -89,11 +91,11 @@ class PostgreJdbcDdlTest {
 		String[][] resultArr = { { "schema_name" }, { "public" }, { "pg_catalog" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<SchemaInfoBO> schemas = postgreJdbcDdl.showSchemas(connection);
 			assertEquals(2, schemas.size());
-			assertEquals("public", schemas.get(0).getName());
+			assertEquals("public", schemas.getFirst().getName());
 		}
 	}
 
@@ -102,11 +104,11 @@ class PostgreJdbcDdlTest {
 		String[][] resultArr = { { "table_name", "description" }, { "users", "User table" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<TableInfoBO> tables = postgreJdbcDdl.showTables(connection, "public", "user");
 			assertEquals(1, tables.size());
-			assertEquals("users", tables.get(0).getName());
+			assertEquals("users", tables.getFirst().getName());
 		}
 	}
 
@@ -115,7 +117,7 @@ class PostgreJdbcDdlTest {
 		String[][] resultArr = { { "table_name", "description" }, { "orders", null } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<TableInfoBO> tables = postgreJdbcDdl.showTables(connection, "public", null);
 			assertEquals(1, tables.size());
@@ -127,7 +129,7 @@ class PostgreJdbcDdlTest {
 		String[][] resultArr = { { "table_name", "description" }, { "users", "User table" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<TableInfoBO> tables = postgreJdbcDdl.fetchTables(connection, "public",
 					Arrays.asList("users", "orders"));
@@ -142,13 +144,12 @@ class PostgreJdbcDdlTest {
 				{ "email", "Email", "character varying", "false", "false" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<ColumnInfoBO> columns = postgreJdbcDdl.showColumns(connection, "public", "users");
 			assertEquals(2, columns.size());
-			assertEquals("id", columns.get(0).getName());
-			assertTrue(columns.get(0).isPrimary());
+			assertEquals("id", columns.getFirst().getName());
+			assertTrue(columns.getFirst().isPrimary());
 		}
 	}
 
@@ -158,14 +159,13 @@ class PostgreJdbcDdlTest {
 				{ "orders", "user_id", "fk_orders_users", "users", "id" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<ForeignKeyInfoBO> fks = postgreJdbcDdl.showForeignKeys(connection, "public",
 					Arrays.asList("orders", "users"));
 			assertEquals(1, fks.size());
-			assertEquals("orders", fks.get(0).getTable());
-			assertEquals("users", fks.get(0).getReferencedTable());
+			assertEquals("orders", fks.getFirst().getTable());
+			assertEquals("users", fks.getFirst().getReferencedTable());
 		}
 	}
 
@@ -174,8 +174,7 @@ class PostgreJdbcDdlTest {
 		String[][] resultArr = { { "name" }, { "Alice" }, { "Bob" }, { "Alice" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<String> samples = postgreJdbcDdl.sampleColumn(connection, "public", "users", "name");
 			assertTrue(samples.contains("Alice"));
@@ -186,8 +185,7 @@ class PostgreJdbcDdlTest {
 	@Test
 	void sampleColumn_sqlException_returnsEmptyList() {
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString(), anyString()))
-				.thenThrow(new SQLException("error"));
+			SqlExecutorTestSupport.stubSqlException(ms, new SQLException("error"));
 
 			List<String> samples = postgreJdbcDdl.sampleColumn(connection, "public", "users", "name");
 			assertTrue(samples.isEmpty());
@@ -199,21 +197,19 @@ class PostgreJdbcDdlTest {
 		ResultSetBO expected = ResultSetBO.builder().build();
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnObject(any(Connection.class), anyString(), anyString()))
+			ms.when(() -> SqlExecutor.executeSql(any(Connection.class), nullable(String.class), anyString()))
 				.thenReturn(expected);
 
 			ResultSetBO result = postgreJdbcDdl.scanTable(connection, "public", "users");
 			assertSame(expected, result);
-			ms.verify(() -> SqlExecutor.executeSqlAndReturnObject(connection, "public",
-					"SELECT *\nFROM \n    users\nLIMIT 20;"));
+			ms.verify(() -> SqlExecutor.executeSql(connection, "public", "SELECT * FROM users LIMIT 20;"));
 		}
 	}
 
 	@Test
 	void scanTable_sqlException_throwsRuntimeException() {
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnObject(any(Connection.class), anyString(), anyString()))
-				.thenThrow(new SQLException("error"));
+			ms.when(() -> SqlExecutor.executeSql(any(Connection.class), anyString(), anyString())).thenThrow(new com.alibaba.cloud.ai.dataagent.exception.RuntimeSqlException(new SQLException("error")));
 
 			assertRuntimeCause(SQLException.class, "error",
 					() -> postgreJdbcDdl.scanTable(connection, "public", "users"));
@@ -223,8 +219,7 @@ class PostgreJdbcDdlTest {
 	@Test
 	void showDatabases_sqlException_throwsRuntimeException() {
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString()))
-				.thenThrow(new SQLException("error"));
+			SqlExecutorTestSupport.stubSqlException(ms, new SQLException("error"));
 
 			assertRuntimeCause(SQLException.class, "error", () -> postgreJdbcDdl.showDatabases(connection));
 		}
@@ -235,7 +230,7 @@ class PostgreJdbcDdlTest {
 		String[][] resultArr = { { "datname" }, {}, { "mydb" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<DatabaseInfoBO> databases = postgreJdbcDdl.showDatabases(connection);
 			assertEquals(1, databases.size());
@@ -247,7 +242,7 @@ class PostgreJdbcDdlTest {
 		String[][] resultArr = { { "schema_name" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			assertTrue(postgreJdbcDdl.showSchemas(connection).isEmpty());
 		}
@@ -256,8 +251,7 @@ class PostgreJdbcDdlTest {
 	@Test
 	void showSchemas_sqlException_throwsRuntimeException() {
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString()))
-				.thenThrow(new SQLException("error"));
+			SqlExecutorTestSupport.stubSqlException(ms, new SQLException("error"));
 
 			assertRuntimeCause(SQLException.class, "error", () -> postgreJdbcDdl.showSchemas(connection));
 		}
@@ -268,7 +262,7 @@ class PostgreJdbcDdlTest {
 		String[][] resultArr = { { "schema_name" }, {}, { "public" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<SchemaInfoBO> schemas = postgreJdbcDdl.showSchemas(connection);
 			assertEquals(1, schemas.size());
@@ -280,7 +274,7 @@ class PostgreJdbcDdlTest {
 		String[][] resultArr = { { "table_name", "description" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<TableInfoBO> tables = postgreJdbcDdl.showTables(connection, "public", null);
 			assertTrue(tables.isEmpty());
@@ -292,7 +286,7 @@ class PostgreJdbcDdlTest {
 		String[][] resultArr = { { "table_name", "description" }, {}, { "users", "User table" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<TableInfoBO> tables = postgreJdbcDdl.showTables(connection, "public", null);
 			assertEquals(1, tables.size());
@@ -302,8 +296,7 @@ class PostgreJdbcDdlTest {
 	@Test
 	void showTables_sqlException_throwsRuntimeException() {
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString()))
-				.thenThrow(new SQLException("error"));
+			SqlExecutorTestSupport.stubSqlException(ms, new SQLException("error"));
 
 			assertRuntimeCause(SQLException.class, "error",
 					() -> postgreJdbcDdl.showTables(connection, "public", null));
@@ -315,7 +308,7 @@ class PostgreJdbcDdlTest {
 		String[][] resultArr = { { "table_name", "description" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<TableInfoBO> tables = postgreJdbcDdl.fetchTables(connection, "public", List.of("users"));
 			assertTrue(tables.isEmpty());
@@ -327,7 +320,7 @@ class PostgreJdbcDdlTest {
 		String[][] resultArr = { { "table_name", "description" }, {}, { "users", "User table" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<TableInfoBO> tables = postgreJdbcDdl.fetchTables(connection, "public", List.of("users"));
 			assertEquals(1, tables.size());
@@ -337,8 +330,7 @@ class PostgreJdbcDdlTest {
 	@Test
 	void fetchTables_sqlException_throwsRuntimeException() {
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString()))
-				.thenThrow(new SQLException("error"));
+			SqlExecutorTestSupport.stubSqlException(ms, new SQLException("error"));
 
 			assertRuntimeCause(SQLException.class, "error",
 					() -> postgreJdbcDdl.fetchTables(connection, "public", List.of("users")));
@@ -350,8 +342,7 @@ class PostgreJdbcDdlTest {
 		String[][] resultArr = { { "column_name", "description", "data_type", "primary", "notnull" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<ColumnInfoBO> columns = postgreJdbcDdl.showColumns(connection, "public", "users");
 			assertTrue(columns.isEmpty());
@@ -364,8 +355,7 @@ class PostgreJdbcDdlTest {
 				{ "id", "Primary key", "integer", "true", "true" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<ColumnInfoBO> columns = postgreJdbcDdl.showColumns(connection, "public", "users");
 			assertEquals(1, columns.size());
@@ -375,8 +365,7 @@ class PostgreJdbcDdlTest {
 	@Test
 	void showColumns_sqlException_throwsRuntimeException() {
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenThrow(new SQLException("error"));
+			SqlExecutorTestSupport.stubSqlException(ms, new SQLException("error"));
 
 			assertRuntimeCause(SQLException.class, "error",
 					() -> postgreJdbcDdl.showColumns(connection, "public", "users"));
@@ -389,8 +378,7 @@ class PostgreJdbcDdlTest {
 				{ "table_name", "column_name", "constraint_name", "foreign_table", "foreign_column" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<ForeignKeyInfoBO> fks = postgreJdbcDdl.showForeignKeys(connection, "public",
 					Arrays.asList("orders", "users"));
@@ -404,8 +392,7 @@ class PostgreJdbcDdlTest {
 				{}, { "orders", "user_id", "fk_orders_users", "users", "id" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<ForeignKeyInfoBO> fks = postgreJdbcDdl.showForeignKeys(connection, "public",
 					Arrays.asList("orders", "users"));
@@ -416,8 +403,7 @@ class PostgreJdbcDdlTest {
 	@Test
 	void showForeignKeys_sqlException_throwsRuntimeException() {
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenThrow(new SQLException("error"));
+			SqlExecutorTestSupport.stubSqlException(ms, new SQLException("error"));
 
 			assertRuntimeCause(SQLException.class, "error",
 					() -> postgreJdbcDdl.showForeignKeys(connection, "public", List.of("orders")));
@@ -429,8 +415,7 @@ class PostgreJdbcDdlTest {
 		String[][] resultArr = { { "name" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<String> samples = postgreJdbcDdl.sampleColumn(connection, "public", "users", "name");
 			assertTrue(samples.isEmpty());
@@ -442,8 +427,7 @@ class PostgreJdbcDdlTest {
 		String[][] resultArr = { { "name" }, {}, { "Alice" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<String> samples = postgreJdbcDdl.sampleColumn(connection, "public", "users", "name");
 			assertEquals(1, samples.size());
@@ -455,8 +439,7 @@ class PostgreJdbcDdlTest {
 		String[][] resultArr = { { "name" }, { "name" }, { "Alice" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<String> samples = postgreJdbcDdl.sampleColumn(connection, "public", "users", "name");
 			assertEquals(1, samples.size());

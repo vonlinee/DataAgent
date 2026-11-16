@@ -90,8 +90,6 @@ class AbstractAccessorTest {
 		when(dbConnectionPool.getConnection(dbConfig)).thenReturn(connection);
 		when(ddlFactory.getDdlExecutorByDbConfig(dbConfig)).thenReturn(ddlExecutor);
 		when(connection.createStatement()).thenReturn(statement);
-		when(connection.getMetaData()).thenReturn(databaseMetaData);
-		when(databaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
 		when(statement.executeQuery("SELECT 1")).thenReturn(resultSet);
 		when(resultSet.getMetaData()).thenReturn(resultSetMetaData);
 		when(resultSetMetaData.getColumnCount()).thenReturn(1);

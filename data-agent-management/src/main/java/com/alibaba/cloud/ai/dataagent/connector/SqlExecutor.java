@@ -88,6 +88,8 @@ public class SqlExecutor {
 		String dialect = databaseMetaData.getDatabaseProductName();
 		if (isDameng(dialect)) {
 			return DatabaseDialectEnum.DAMENG;
+		} else if (dialect.equals(DatabaseDialectEnum.MYSQL.code)) {
+			return DatabaseDialectEnum.MYSQL;
 		} else if (dialect.equals(DatabaseDialectEnum.POSTGRESQL.code)) {
 			return DatabaseDialectEnum.POSTGRESQL;
 		} else if (dialect.equals(DatabaseDialectEnum.H2.code)) {
@@ -165,6 +167,9 @@ public class SqlExecutor {
 
 	private static List<String[]> executeQuery(Connection connection, String databaseOrSchema, String sql)
 			throws SQLException {
+		if (StringUtils.isEmpty(databaseOrSchema)) {
+			return executeQuery(connection, sql);
+		}
 		String originalDb = connection.getCatalog();
 		DatabaseMetaData metaData = connection.getMetaData();
 		String dialect = metaData.getDatabaseProductName();

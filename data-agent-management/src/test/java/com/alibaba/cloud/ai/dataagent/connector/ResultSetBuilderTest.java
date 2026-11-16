@@ -50,8 +50,8 @@ class ResultSetBuilderTest {
 		assertTrue(result.getColumn().contains("id"));
 		assertTrue(result.getColumn().contains("name"));
 		assertEquals(1, result.getData().size());
-		assertEquals("1", result.getData().get(0).get("id"));
-		assertEquals("Alice", result.getData().get(0).get("name"));
+		assertEquals("1", result.getData().getFirst().get("id"));
+		assertEquals("Alice", result.getData().getFirst().get("name"));
 	}
 
 	@Test
@@ -84,7 +84,7 @@ class ResultSetBuilderTest {
 
 		ResultSetBO result = ResultSetBuilder.buildFrom(rs, "public");
 
-		assertEquals("", result.getData().get(0).get("col"));
+		assertEquals("", result.getData().getFirst().get("col"));
 	}
 
 	@Test
@@ -101,7 +101,7 @@ class ResultSetBuilderTest {
 		ResultSetBO result = ResultSetBuilder.buildFrom(rs, "public");
 
 		assertTrue(result.getColumn().contains("my_col"));
-		assertEquals("value", result.getData().get(0).get("my_col"));
+		assertEquals("value", result.getData().getFirst().get("my_col"));
 	}
 
 	@Test

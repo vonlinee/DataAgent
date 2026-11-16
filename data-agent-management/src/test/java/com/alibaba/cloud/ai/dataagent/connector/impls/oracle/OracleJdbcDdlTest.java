@@ -24,6 +24,7 @@ import com.alibaba.cloud.ai.dataagent.bo.schema.ResultSetBO;
 import com.alibaba.cloud.ai.dataagent.bo.schema.SchemaInfoBO;
 import com.alibaba.cloud.ai.dataagent.bo.schema.TableInfoBO;
 import com.alibaba.cloud.ai.dataagent.connector.SqlExecutor;
+import com.alibaba.cloud.ai.dataagent.connector.SqlExecutorTestSupport;
 import com.alibaba.cloud.ai.dataagent.enums.BizDataSourceTypeEnum;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -70,11 +71,11 @@ class OracleJdbcDdlTest {
 		String[][] resultArr = { { "USERNAME" }, { "HR" }, { "SYSTEM" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<DatabaseInfoBO> databases = oracleJdbcDdl.showDatabases(connection);
 			assertEquals(2, databases.size());
-			assertEquals("HR", databases.get(0).getName());
+			assertEquals("HR", databases.getFirst().getName());
 		}
 	}
 
@@ -83,7 +84,7 @@ class OracleJdbcDdlTest {
 		String[][] resultArr = { { "USERNAME" }, { "HR" }, { "SCOTT" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<SchemaInfoBO> schemas = oracleJdbcDdl.showSchemas(connection);
 			assertEquals(2, schemas.size());
@@ -95,12 +96,11 @@ class OracleJdbcDdlTest {
 		String[][] resultArr = { { "TABLE_NAME", "COMMENTS" }, { "EMPLOYEES", "Employee table" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<TableInfoBO> tables = oracleJdbcDdl.showTables(connection, "HR", null);
 			assertEquals(1, tables.size());
-			assertEquals("EMPLOYEES", tables.get(0).getName());
+			assertEquals("EMPLOYEES", tables.getFirst().getName());
 		}
 	}
 
@@ -109,8 +109,7 @@ class OracleJdbcDdlTest {
 		String[][] resultArr = { { "TABLE_NAME", "COMMENTS" }, { "EMPLOYEES", "Employee table" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<TableInfoBO> tables = oracleJdbcDdl.showTables(connection, "HR", "EMP");
 			assertEquals(1, tables.size());
@@ -124,8 +123,7 @@ class OracleJdbcDdlTest {
 		when(connection.getSchema()).thenReturn("HR");
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<TableInfoBO> tables = oracleJdbcDdl.showTables(connection, "", null);
 			assertTrue(tables.isEmpty());
@@ -141,8 +139,7 @@ class OracleJdbcDdlTest {
 		when(databaseMetaData.getUserName()).thenReturn("hr");
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<TableInfoBO> tables = oracleJdbcDdl.showTables(connection, null, null);
 			assertTrue(tables.isEmpty());
@@ -166,7 +163,7 @@ class OracleJdbcDdlTest {
 		String[][] resultArr = { { "TABLE_NAME", "COMMENTS" }, { "EMPLOYEES", "Employee table" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<TableInfoBO> tables = oracleJdbcDdl.fetchTables(connection, "HR", List.of("EMPLOYEES"));
 			assertEquals(1, tables.size());
@@ -180,13 +177,12 @@ class OracleJdbcDdlTest {
 				{ "FIRST_NAME", "First name", "VARCHAR2", "false", "false" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<ColumnInfoBO> columns = oracleJdbcDdl.showColumns(connection, "HR", "employees");
 			assertEquals(2, columns.size());
-			assertEquals("EMPLOYEE_ID", columns.get(0).getName());
-			assertTrue(columns.get(0).isPrimary());
+			assertEquals("EMPLOYEE_ID", columns.getFirst().getName());
+			assertTrue(columns.getFirst().isPrimary());
 		}
 	}
 
@@ -196,8 +192,7 @@ class OracleJdbcDdlTest {
 				{ "EMPLOYEE_ID", "PK" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<ColumnInfoBO> columns = oracleJdbcDdl.showColumns(connection, "HR", "employees");
 			assertTrue(columns.isEmpty());
@@ -217,13 +212,12 @@ class OracleJdbcDdlTest {
 				{ "ORDERS", "CUSTOMER_ID", "FK_ORDERS_CUST", "CUSTOMERS", "ID" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<ForeignKeyInfoBO> fks = oracleJdbcDdl.showForeignKeys(connection, "HR",
 					Arrays.asList("ORDERS", "CUSTOMERS"));
 			assertEquals(1, fks.size());
-			assertEquals("ORDERS", fks.get(0).getTable());
+			assertEquals("ORDERS", fks.getFirst().getTable());
 		}
 	}
 
@@ -232,8 +226,7 @@ class OracleJdbcDdlTest {
 		String[][] resultArr = { { "NAME" }, { "Alice" }, { "Bob" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<String> samples = oracleJdbcDdl.sampleColumn(connection, "HR", "employees", "name");
 			assertEquals(2, samples.size());
@@ -245,8 +238,7 @@ class OracleJdbcDdlTest {
 		String[][] resultArr = { { "NAME" }, { null }, { "Bob" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<String> samples = oracleJdbcDdl.sampleColumn(connection, "HR", "employees", "name");
 			assertEquals(1, samples.size());
@@ -255,13 +247,12 @@ class OracleJdbcDdlTest {
 	}
 
 	@Test
-	void sampleColumn_sqlException_returnsEmptyList() {
+	void sampleColumn_sqlException_throwsRuntimeException() {
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenThrow(new SQLException("error"));
+			SqlExecutorTestSupport.stubSqlException(ms, new SQLException("error"));
 
-			List<String> samples = oracleJdbcDdl.sampleColumn(connection, "HR", "employees", "name");
-			assertTrue(samples.isEmpty());
+			assertRuntimeCause(SQLException.class, "error",
+					() -> oracleJdbcDdl.sampleColumn(connection, "HR", "employees", "name"));
 		}
 	}
 
@@ -270,12 +261,11 @@ class OracleJdbcDdlTest {
 		ResultSetBO expected = ResultSetBO.builder().build();
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnObject(any(Connection.class), anyString(), anyString()))
-				.thenReturn(expected);
+			ms.when(() -> SqlExecutor.executeSql(any(Connection.class), anyString(), anyString())).thenReturn(expected);
 
 			ResultSetBO result = oracleJdbcDdl.scanTable(connection, "HR", "employees");
 			assertSame(expected, result);
-			ms.verify(() -> SqlExecutor.executeSqlAndReturnObject(connection, "HR",
+			ms.verify(() -> SqlExecutor.executeSql(connection, "HR",
 					"SELECT * FROM EMPLOYEES WHERE ROWNUM <= 20"));
 		}
 	}
@@ -283,8 +273,7 @@ class OracleJdbcDdlTest {
 	@Test
 	void scanTable_sqlException_throwsRuntimeException() {
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnObject(any(Connection.class), anyString(), anyString()))
-				.thenThrow(new SQLException("error"));
+			ms.when(() -> SqlExecutor.executeSql(any(Connection.class), anyString(), anyString())).thenThrow(new com.alibaba.cloud.ai.dataagent.exception.RuntimeSqlException(new SQLException("error")));
 
 			assertRuntimeCause(SQLException.class, "error",
 					() -> oracleJdbcDdl.scanTable(connection, "HR", "employees"));
@@ -296,7 +285,7 @@ class OracleJdbcDdlTest {
 		String[][] resultArr = { { "USERNAME" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			assertTrue(oracleJdbcDdl.showDatabases(connection).isEmpty());
 		}
@@ -305,8 +294,7 @@ class OracleJdbcDdlTest {
 	@Test
 	void showDatabases_sqlException_throwsRuntimeException() {
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString()))
-				.thenThrow(new SQLException("error"));
+			SqlExecutorTestSupport.stubSqlException(ms, new SQLException("error"));
 
 			assertRuntimeCause(SQLException.class, "error", () -> oracleJdbcDdl.showDatabases(connection));
 		}
@@ -317,7 +305,7 @@ class OracleJdbcDdlTest {
 		String[][] resultArr = { { "USERNAME" }, {}, { "HR" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<DatabaseInfoBO> databases = oracleJdbcDdl.showDatabases(connection);
 			assertEquals(1, databases.size());
@@ -329,7 +317,7 @@ class OracleJdbcDdlTest {
 		String[][] resultArr = { { "USERNAME" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			assertTrue(oracleJdbcDdl.showSchemas(connection).isEmpty());
 		}
@@ -338,8 +326,7 @@ class OracleJdbcDdlTest {
 	@Test
 	void showSchemas_sqlException_throwsRuntimeException() {
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString()))
-				.thenThrow(new SQLException("error"));
+			SqlExecutorTestSupport.stubSqlException(ms, new SQLException("error"));
 
 			assertRuntimeCause(SQLException.class, "error", () -> oracleJdbcDdl.showSchemas(connection));
 		}
@@ -350,7 +337,7 @@ class OracleJdbcDdlTest {
 		String[][] resultArr = { { "USERNAME" }, {}, { "HR" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<SchemaInfoBO> schemas = oracleJdbcDdl.showSchemas(connection);
 			assertEquals(1, schemas.size());
@@ -362,8 +349,7 @@ class OracleJdbcDdlTest {
 		String[][] resultArr = { { "TABLE_NAME", "COMMENTS" }, {}, { "EMPLOYEES", "Employee table" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<TableInfoBO> tables = oracleJdbcDdl.showTables(connection, "HR", null);
 			assertEquals(1, tables.size());
@@ -373,8 +359,7 @@ class OracleJdbcDdlTest {
 	@Test
 	void showTables_sqlException_throwsRuntimeException() {
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString(), anyString()))
-				.thenThrow(new SQLException("error"));
+			SqlExecutorTestSupport.stubSqlException(ms, new SQLException("error"));
 
 			assertRuntimeCause(SQLException.class, "error", () -> oracleJdbcDdl.showTables(connection, "HR", null));
 		}
@@ -385,12 +370,11 @@ class OracleJdbcDdlTest {
 		String[][] resultArr = { { "TABLE_NAME", "COMMENTS" }, { "EMPLOYEES" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<TableInfoBO> tables = oracleJdbcDdl.showTables(connection, "HR", null);
 			assertEquals(1, tables.size());
-			assertNull(tables.get(0).getDescription());
+			assertNull(tables.getFirst().getDescription());
 		}
 	}
 
@@ -399,7 +383,7 @@ class OracleJdbcDdlTest {
 		String[][] resultArr = { { "TABLE_NAME", "COMMENTS" }, {}, { "EMPLOYEES", "Employee table" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString())).thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<TableInfoBO> tables = oracleJdbcDdl.fetchTables(connection, "HR", List.of("EMPLOYEES"));
 			assertEquals(1, tables.size());
@@ -409,8 +393,7 @@ class OracleJdbcDdlTest {
 	@Test
 	void fetchTables_sqlException_throwsRuntimeException() {
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), anyString()))
-				.thenThrow(new SQLException("error"));
+			SqlExecutorTestSupport.stubSqlException(ms, new SQLException("error"));
 
 			assertRuntimeCause(SQLException.class, "error",
 					() -> oracleJdbcDdl.fetchTables(connection, "HR", List.of("EMPLOYEES")));
@@ -422,8 +405,7 @@ class OracleJdbcDdlTest {
 		String[][] resultArr = { { "COLUMN_NAME", "COMMENTS", "DATA_TYPE", "IS_PRIMARY", "IS_NOT_NULL" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<ColumnInfoBO> columns = oracleJdbcDdl.showColumns(connection, "HR", "employees");
 			assertTrue(columns.isEmpty());
@@ -433,8 +415,7 @@ class OracleJdbcDdlTest {
 	@Test
 	void showColumns_sqlException_throwsRuntimeException() {
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenThrow(new SQLException("error"));
+			SqlExecutorTestSupport.stubSqlException(ms, new SQLException("error"));
 
 			assertRuntimeCause(SQLException.class, "error",
 					() -> oracleJdbcDdl.showColumns(connection, "HR", "employees"));
@@ -454,8 +435,7 @@ class OracleJdbcDdlTest {
 				{}, { "ORDERS", "CUSTOMER_ID", "FK_ORDERS_CUST", "CUSTOMERS", "ID" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<ForeignKeyInfoBO> fks = oracleJdbcDdl.showForeignKeys(connection, "HR",
 					Arrays.asList("ORDERS", "CUSTOMERS"));
@@ -470,8 +450,7 @@ class OracleJdbcDdlTest {
 				{ "ORDERS", "CUSTOMER_ID" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<ForeignKeyInfoBO> fks = oracleJdbcDdl.showForeignKeys(connection, "HR",
 					Arrays.asList("ORDERS", "CUSTOMERS"));
@@ -482,8 +461,7 @@ class OracleJdbcDdlTest {
 	@Test
 	void showForeignKeys_sqlException_throwsRuntimeException() {
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenThrow(new SQLException("error"));
+			SqlExecutorTestSupport.stubSqlException(ms, new SQLException("error"));
 
 			assertRuntimeCause(SQLException.class, "error",
 					() -> oracleJdbcDdl.showForeignKeys(connection, "HR", List.of("ORDERS")));
@@ -495,8 +473,7 @@ class OracleJdbcDdlTest {
 		String[][] resultArr = { { "NAME" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<String> samples = oracleJdbcDdl.sampleColumn(connection, "HR", "employees", "name");
 			assertTrue(samples.isEmpty());
@@ -508,8 +485,7 @@ class OracleJdbcDdlTest {
 		String[][] resultArr = { { "NAME" }, {}, { "Alice" } };
 
 		try (MockedStatic<SqlExecutor> ms = mockStatic(SqlExecutor.class)) {
-			ms.when(() -> SqlExecutor.executeSqlAndReturnArr(any(Connection.class), any(), anyString()))
-				.thenReturn(resultArr);
+			SqlExecutorTestSupport.stubRows(ms, resultArr);
 
 			List<String> samples = oracleJdbcDdl.sampleColumn(connection, "HR", "employees", "name");
 			assertEquals(1, samples.size());

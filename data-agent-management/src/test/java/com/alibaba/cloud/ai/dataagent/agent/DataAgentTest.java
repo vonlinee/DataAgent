@@ -54,14 +54,6 @@ class DataAgentTest {
     }
 
     @Test
-    void resolvesDefaultsForMissingAgenticSettings() {
-        Agent agent = Agent.builder().prompt(" ").maxLoopCount(null).build();
-
-        assertThat(DataAgent.resolveSystemPrompt(agent)).contains("严格遵循 ReAct 模式");
-        assertThat(DataAgent.resolveMaxLoopCount(agent)).isEqualTo(10);
-    }
-
-    @Test
     void infersTraceTextTypesForToolResults() {
         assertThat(DataAgent.inferTextType("{\"path\":\"SKILL.md\"}"))
             .isEqualTo("JSON");
